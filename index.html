@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Makabi Family Monthly Expenses</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f8fafc; --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
+    --blue:#2563eb; --green:#16a34a; --red:#dc2626; --amber:#d97706; --purple:#7c3aed;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px;}
+  .wrap{max-width:1280px; margin:0 auto; padding:20px;}
+  header{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-bottom:16px; border-bottom:2px solid var(--border);}
+  header h1{font-size:22px;}
+  header .sub{color:var(--muted); font-size:13px;}
+  .tabs{display:flex; gap:6px; margin:16px 0; flex-wrap:wrap;}
+  .tab{padding:9px 18px; border:1px solid var(--border); border-radius:8px; background:var(--panel); cursor:pointer; font-weight:600; color:var(--muted);}
+  .tab.active{background:var(--blue); color:#fff; border-color:var(--blue);}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-bottom:16px;}
+  .card{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px;}
+  .card .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:4px;}
+  .card .val{font-size:19px; font-weight:700;}
+  .card .val.pos{color:var(--green);} .card .val.neg{color:var(--red);}
+  .card .hint{font-size:11px; color:var(--muted); margin-top:3px;}
+  .controls{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center;}
+  input,select,textarea{border:1px solid var(--border); border-radius:8px; padding:8px 10px; font-size:14px; background:#fff; color:var(--text); font-family:inherit;}
+  input:focus,select:focus,textarea:focus{outline:2px solid #bfdbfe;}
+  .btn{border:none; border-radius:8px; padding:9px 16px; font-weight:600; cursor:pointer; font-size:14px;}
+  .btn-primary{background:var(--blue); color:#fff;}
+  .btn-green{background:var(--green); color:#fff;}
+  .btn-light{background:var(--panel); border:1px solid var(--border); color:var(--text);}
+  .btn-sm{padding:4px 10px; font-size:12px; border-radius:6px;}
+  .btn-danger{background:#fee2e2; color:var(--red);}
+  table{width:100%; border-collapse:collapse; background:#fff;}
+  th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); text-align:left; padding:8px 10px; border-bottom:2px solid var(--border); cursor:pointer; user-select:none; white-space:nowrap;}
+  th .arrow{font-size:9px;}
+  td{padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:top;}
+  tr:hover td{background:#f1f5f9;}
+  .num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
+  th.num{text-align:right;}
+  .badge{display:inline-block; padding:2px 8px; border-radius:99px; font-size:11px; font-weight:600;}
+  .b-personal{background:#ede9fe; color:var(--purple);}
+  .b-business{background:#dbeafe; color:var(--blue);}
+  .b-income{background:#dcfce7; color:var(--green);}
+  .b-freq{background:#f1f5f9; color:var(--muted);}
+  .b-tbd{background:#fef3c7; color:var(--amber);}
+  .muted{color:var(--muted); font-size:12px;}
+  .tblwrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px;}
+  tfoot td{font-weight:700; background:var(--panel);}
+  /* modal */
+  .overlay{position:fixed; inset:0; background:rgba(15,23,42,.4); display:none; align-items:flex-start; justify-content:center; padding:40px 16px; z-index:50; overflow:auto;}
+  .overlay.show{display:flex;}
+  .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:520px; box-shadow:0 20px 50px rgba(0,0,0,.2);}
+  .modal h3{margin-bottom:14px;}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .field{display:flex; flex-direction:column; gap:4px; margin-bottom:10px;}
+  .field label{font-size:12px; font-weight:600; color:var(--muted);}
+  .field input,.field select,.field textarea{width:100%;}
+  .modal .actions{display:flex; justify-content:flex-end; gap:8px; margin-top:14px;}
+  /* gate */
+  #gate{position:fixed; inset:0; background:#fff; z-index:100; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;}
+  #gate h2{font-size:20px;}
+  #gate input{font-size:16px; text-align:center; width:220px;}
+  .section-title{font-size:16px; font-weight:700; margin:20px 0 8px;}
+  .toolbar-right{margin-left:auto; display:flex; gap:8px;}
+  @media(max-width:700px){ .grid2{grid-template-columns:1fr;} header h1{font-size:18px;} }
+</style>
+</head>
+<body>
+<div id="gate">
+  <h2>Makabi Family Monthly Expenses</h2>
+  <p class="muted">Enter the family passcode</p>
+  <input type="password" id="gateInput" placeholder="Passcode" autofocus>
+  <button class="btn btn-primary" onclick="checkGate()">Enter</button>
+  <p id="gateErr" class="muted" style="color:var(--red); display:none;">Wrong passcode</p>
+</div>
+
+<div class="wrap" id="app" style="display:none;">
+  <header>
+    <div>
+      <h1>Makabi Family Monthly Expenses</h1>
+      <div class="sub">Mike &amp; Loren &middot; budget.michaelmakabi.com &middot; live shared data</div>
+    </div>
+    <div class="toolbar-right">
+      <button class="btn btn-light" onclick="loadAll()">&#8635; Refresh</button>
+      <button class="btn btn-primary" onclick="openItemModal()">+ Add Item</button>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="dashboard" onclick="setTab('dashboard')">Dashboard</div>
+    <div class="tab" data-tab="expenses" onclick="setTab('expenses')">Expenses</div>
+    <div class="tab" data-tab="income" onclick="setTab('income')">Income</div>
+    <div class="tab" data-tab="actuals" onclick="setTab('actuals')">Actuals / Log</div>
+    <div class="tab" data-tab="debts" onclick="setTab('debts')">Debts &amp; IOUs</div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="tab-dashboard">
+    <div class="cards" id="dashCards"></div>
+    <div class="section-title">Run Rates (recurring items only)</div>
+    <div class="tblwrap"><table id="rrTable">
+      <thead><tr><th></th><th class="num">Daily</th><th class="num">Weekly</th><th class="num">Monthly</th><th class="num">Quarterly</th><th class="num">Annual</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="section-title">Monthly Spend by Category</div>
+    <div class="tblwrap"><table id="catTable">
+      <thead><tr><th>Category</th><th>Type</th><th class="num">Monthly</th><th class="num">Annual</th><th class="num">% of Spend</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </div>
+
+  <!-- EXPENSES / INCOME (shared renderer) -->
+  <div id="tab-expenses" style="display:none;">
+    <div class="cards" id="expCards"></div>
+    <div class="controls">
+      <input type="search" id="expSearch" placeholder="Search vendor / notes..." oninput="renderItems()">
+      <select id="expType" onchange="renderItems()">
+        <option value="">All Types</option><option value="personal">Personal</option><option value="business">Business</option>
+      </select>
+      <select id="expCat" onchange="renderItems()"><option value="">All Categories</option></select>
+      <select id="expFreq" onchange="renderItems()"><option value="">All Frequencies</option></select>
+      <label class="muted"><input type="checkbox" id="expInactive" onchange="renderItems()"> show inactive</label>
+    </div>
+    <div class="tblwrap"><table id="itemsTable">
+      <thead><tr>
+        <th onclick="sortBy('vendor')">Vendor <span class="arrow"></span></th>
+        <th onclick="sortBy('category')">Category <span class="arrow"></span></th>
+        <th onclick="sortBy('spend_type')">Type <span class="arrow"></span></th>
+        <th class="num" onclick="sortBy('amount')">Amount <span class="arrow"></span></th>
+        <th onclick="sortBy('frequency')">Frequency <span class="arrow"></span></th>
+        <th class="num" onclick="sortBy('monthly')">Monthly Avg <span class="arrow"></span></th>
+        <th class="num" onclick="sortBy('annual')">Annual <span class="arrow"></span></th>
+        <th class="num" onclick="sortBy('due_day')">Due <span class="arrow"></span></th>
+        <th>Notes</th><th></th>
+      </tr></thead>
+      <tbody></tbody><tfoot></tfoot>
+    </table></div>
+  </div>
+
+  <div id="tab-income" style="display:none;">
+    <div class="cards" id="incCards"></div>
+    <div class="controls">
+      <input type="search" id="incSearch" placeholder="Search stream..." oninput="renderItems()">
+      <select id="incCat" onchange="renderItems()"><option value="">All Categories</option></select>
+      <label class="muted"><input type="checkbox" id="incInactive" onchange="renderItems()"> show inactive</label>
+    </div>
+    <div class="tblwrap"><table id="incomeTable">
+      <thead><tr>
+        <th onclick="sortBy('vendor')">Stream <span class="arrow"></span></th>
+        <th onclick="sortBy('category')">Category <span class="arrow"></span></th>
+        <th class="num" onclick="sortBy('amount')">Amount <span class="arrow"></span></th>
+        <th onclick="sortBy('frequency')">Frequency <span class="arrow"></span></th>
+        <th class="num" onclick="sortBy('daily')">DRR <span class="arrow"></span></th>
+        <th class="num" onclick="sortBy('monthly')">MRR <span class="arrow"></span></th>
+        <th class="num" onclick="sortBy('annual')">ARR <span class="arrow"></span></th>
+        <th>Notes</th><th></th>
+      </tr></thead>
+      <tbody></tbody><tfoot></tfoot>
+    </table></div>
+  </div>
+
+  <!-- ACTUALS -->
+  <div id="tab-actuals" style="display:none;">
+    <div class="controls">
+      <span class="muted">From</span><input type="date" id="txFrom" onchange="renderTx()">
+      <span class="muted">To</span><input type="date" id="txTo" onchange="renderTx()">
+      <button class="btn btn-light btn-sm" onclick="txPreset('month')">This Month</button>
+      <button class="btn btn-light btn-sm" onclick="txPreset('last')">Last Month</button>
+      <button class="btn btn-light btn-sm" onclick="txPreset('30')">Last 30d</button>
+      <button class="btn btn-light btn-sm" onclick="txPreset('ytd')">YTD</button>
+      <button class="btn btn-light btn-sm" onclick="txPreset('all')">All</button>
+      <div class="toolbar-right"><button class="btn btn-green" onclick="openTxModal()">+ Log Actual</button></div>
+    </div>
+    <div class="cards" id="txCards"></div>
+    <div class="controls">
+      <input type="search" id="txSearch" placeholder="Search actuals..." oninput="renderTx()">
+      <select id="txKind" onchange="renderTx()"><option value="">Expenses + Income</option><option value="expense">Expenses only</option><option value="income">Income only</option></select>
+      <select id="txType" onchange="renderTx()"><option value="">All Types</option><option value="personal">Personal</option><option value="business">Business</option></select>
+    </div>
+    <div class="tblwrap"><table id="txTable">
+      <thead><tr><th>Date</th><th>Vendor / Source</th><th>Category</th><th>Type</th><th class="num">Amount</th><th>Notes</th><th></th></tr></thead>
+      <tbody></tbody><tfoot></tfoot>
+    </table></div>
+    <p class="muted" style="margin-top:8px;">Log real charges/deposits here with dates. The date-range summary above computes actual daily/weekly/monthly averages from what you log.</p>
+  </div>
+
+  <!-- DEBTS -->
+  <div id="tab-debts" style="display:none;">
+    <div class="cards" id="debtCards"></div>
+    <div class="controls"><div class="toolbar-right"><button class="btn btn-primary" onclick="openDebtModal()">+ Add Debt / IOU</button></div></div>
+    <div class="tblwrap"><table id="debtTable">
+      <thead><tr><th>Name</th><th>Kind</th><th class="num">Balance Owed</th><th class="num">Monthly Payment</th><th>Notes</th><th></th></tr></thead>
+      <tbody></tbody><tfoot></tfoot>
+    </table></div>
+  </div>
+</div>
+
+<!-- ITEM MODAL -->
+<div class="overlay" id="itemModal">
+  <div class="modal">
+    <h3 id="itemModalTitle">Add Item</h3>
+    <div class="grid2">
+      <div class="field"><label>Vendor / Stream *</label><input id="f_vendor"></div>
+      <div class="field"><label>Category</label><input id="f_category" list="catList"><datalist id="catList"></datalist></div>
+      <div class="field"><label>Kind</label><select id="f_kind"><option value="expense">Expense</option><option value="income">Income</option></select></div>
+      <div class="field"><label>Personal / Business</label><select id="f_type"><option value="personal">Personal</option><option value="business">Business</option></select></div>
+      <div class="field"><label>Amount ($)</label><input id="f_amount" type="number" step="0.01" min="0"></div>
+      <div class="field"><label>Frequency</label><select id="f_freq"></select></div>
+      <div class="field"><label>Bill Due Day (1-31, optional)</label><input id="f_due" type="number" min="1" max="31"></div>
+      <div class="field"><label>Active</label><select id="f_active"><option value="true">Yes</option><option value="false">No</option></select></div>
+    </div>
+    <div class="field"><label>Description</label><input id="f_desc"></div>
+    <div class="field"><label>Notes</label><textarea id="f_notes" rows="2"></textarea></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="closeModal('itemModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- TX MODAL -->
+<div class="overlay" id="txModal">
+  <div class="modal">
+    <h3 id="txModalTitle">Log Actual</h3>
+    <div class="grid2">
+      <div class="field"><label>Date *</label><input id="t_date" type="date"></div>
+      <div class="field"><label>Vendor / Source *</label><input id="t_vendor" list="vendorList"><datalist id="vendorList"></datalist></div>
+      <div class="field"><label>Kind</label><select id="t_kind"><option value="expense">Expense</option><option value="income">Income</option></select></div>
+      <div class="field"><label>Personal / Business</label><select id="t_type"><option value="personal">Personal</option><option value="business">Business</option></select></div>
+      <div class="field"><label>Amount ($) *</label><input id="t_amount" type="number" step="0.01" min="0"></div>
+      <div class="field"><label>Category</label><input id="t_category" list="catList"></div>
+    </div>
+    <div class="field"><label>Notes</label><input id="t_notes"></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="closeModal('txModal')">Cancel</button>
+      <button class="btn btn-green" onclick="saveTx()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEBT MODAL -->
+<div class="overlay" id="debtModal">
+  <div class="modal">
+    <h3 id="debtModalTitle">Add Debt / IOU</h3>
+    <div class="grid2">
+      <div class="field"><label>Name *</label><input id="d_name"></div>
+      <div class="field"><label>Kind</label><select id="d_kind"><option value="iou">IOU / Personal Loan</option><option value="credit_card">Credit Card</option><option value="loan">Loan</option></select></div>
+      <div class="field"><label>Balance Owed ($)</label><input id="d_balance" type="number" step="0.01"></div>
+      <div class="field"><label>Monthly Payment ($, optional)</label><input id="d_payment" type="number" step="0.01"></div>
+    </div>
+    <div class="field"><label>Notes</label><input id="d_notes"></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="closeModal('debtModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveDebt()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+const SB_URL = 'https://rsjcgpxvnzbmivcegahh.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJzamNncHh2bnpibWl2Y2VnYWhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg3NDkyNTUsImV4cCI6MjA3NDMyNTI1NX0.0cju_21mRU-K6uJKh7WKpCeRgg5zOTeegC4H7OXNd_s';
+const sb = window.supabase.createClient(SB_URL, SB_KEY);
+const PASSCODE = 'makabi2026';
+
+const FREQ = {
+  'daily':{label:'Daily', f:30.4375},
+  'weekly':{label:'Weekly', f:4.34524},
+  'per-10-days':{label:'Every 10 Days', f:3.04375},
+  'biweekly':{label:'Every 2 Weeks', f:2.17262},
+  'monthly':{label:'Monthly', f:1},
+  'quarterly':{label:'Quarterly', f:1/3},
+  'annual':{label:'Annual', f:1/12},
+  'one-time':{label:'One-Time', f:0}
+};
+
+let items=[], txs=[], debts=[];
+let sortKey='monthly', sortDir=-1, currentTab='dashboard', editId=null, editTxId=null, editDebtId=null;
+
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const fmt = n => (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:0, maximumFractionDigits:0});
+const fmt2 = n => (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
+const esc = s => (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const monthly = it => (Number(it.amount)||0) * (FREQ[it.frequency]?.f ?? 1);
+const daily = it => monthly(it)*12/365.25;
+const annual = it => monthly(it)*12;
+
+function checkGate(){
+  if($('gateInput').value === PASSCODE){
+    localStorage.setItem('mkb_gate','1');
+    $('gate').style.display='none'; $('app').style.display='block';
+  } else { $('gateErr').style.display='block'; }
+}
+$('gateInput')?.addEventListener('keydown', e=>{ if(e.key==='Enter') checkGate(); });
+if(localStorage.getItem('mkb_gate')==='1'){ $('gate').style.display='none'; $('app').style.display='block'; }
+
+function setTab(t){
+  currentTab=t;
+  document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active', el.dataset.tab===t));
+  ['dashboard','expenses','income','actuals','debts'].forEach(x=>$('tab-'+x).style.display = x===t?'block':'none');
+  renderAll();
+}
+
+// ---------- data ----------
+async function loadAll(){
+  const [a,b,c] = await Promise.all([
+    sb.from('budget_expenses').select('*').order('vendor'),
+    sb.from('budget_transactions').select('*').order('tx_date',{ascending:false}),
+    sb.from('budget_debts').select('*').order('balance',{ascending:false})
+  ]);
+  if(a.error||b.error||c.error){ alert('Load error: '+(a.error||b.error||c.error).message); return; }
+  items=a.data; txs=b.data; debts=c.data;
+  buildFilters(); renderAll();
+}
+
+function buildFilters(){
+  const cats=[...new Set(items.map(i=>i.category).filter(Boolean))].sort();
+  const fill=(sel,arr,all)=>{ const cur=$(sel).value; $(sel).innerHTML=`<option value="">${all}</option>`+arr.map(c=>`<option>${esc(c)}</option>`).join(''); $(sel).value=cur; };
+  fill('expCat',cats,'All Categories');
+  fill('incCat',cats.filter(c=>items.some(i=>i.kind==='income'&&i.category===c)),'All Categories');
+  const fr=Object.keys(FREQ); const cur=$('expFreq').value;
+  $('expFreq').innerHTML='<option value="">All Frequencies</option>'+fr.map(f=>`<option value="${f}">${FREQ[f].label}</option>`).join(''); $('expFreq').value=cur;
+  $('catList').innerHTML=cats.map(c=>`<option>${esc(c)}</option>`).join('');
+  $('vendorList').innerHTML=[...new Set(items.map(i=>i.vendor))].sort().map(v=>`<option>${esc(v)}</option>`).join('');
+  const ff=$('f_freq'); ff.innerHTML=fr.map(f=>`<option value="${f}">${FREQ[f].label}</option>`).join(''); ff.value='monthly';
+}
+
+// ---------- dashboard ----------
+function renderDashboard(){
+  const act=items.filter(i=>i.active!==false && i.frequency!=='one-time');
+  const exp=act.filter(i=>i.kind!=='income'), inc=act.filter(i=>i.kind==='income');
+  const mExp=exp.reduce((s,i)=>s+monthly(i),0), mInc=inc.reduce((s,i)=>s+monthly(i),0);
+  const mPers=exp.filter(i=>i.spend_type==='personal').reduce((s,i)=>s+monthly(i),0);
+  const mBiz=exp.filter(i=>i.spend_type!=='personal').reduce((s,i)=>s+monthly(i),0);
+  const totalDebt=debts.reduce((s,d)=>s+(Number(d.balance)||0),0);
+  const net=mInc-mExp;
+  $('dashCards').innerHTML = `
+    <div class="card"><div class="lbl">Monthly Expenses</div><div class="val neg">${fmt(mExp)}</div><div class="hint">${exp.length} recurring items</div></div>
+    <div class="card"><div class="lbl">Monthly Income (MRR)</div><div class="val pos">${fmt(mInc)}</div><div class="hint">${inc.length} streams</div></div>
+    <div class="card"><div class="lbl">Net Monthly</div><div class="val ${net>=0?'pos':'neg'}">${fmt(net)}</div><div class="hint">income &minus; expenses</div></div>
+    <div class="card"><div class="lbl">Personal / mo</div><div class="val">${fmt(mPers)}</div></div>
+    <div class="card"><div class="lbl">Business / mo</div><div class="val">${fmt(mBiz)}</div></div>
+    <div class="card"><div class="lbl">Total Debt &amp; IOUs</div><div class="val neg">${fmt(totalDebt)}</div><div class="hint">${debts.length} entries</div></div>`;
+  const per=m=>[m*12/365.25, m*12/52.1786, m, m*3, m*12];
+  const rows=[['Expenses',per(mExp),'neg'],['Income',per(mInc),'pos'],['Net',per(net),net>=0?'pos':'neg'],['Personal spend',per(mPers),''],['Business spend',per(mBiz),'']];
+  $('rrTable').querySelector('tbody').innerHTML = rows.map(([l,v,cls])=>
+    `<tr><td><b>${l}</b></td>${v.map(x=>`<td class="num ${cls}" style="color:${cls==='pos'?'var(--green)':cls==='neg'?'var(--red)':'inherit'}">${fmt(x)}</td>`).join('')}</tr>`).join('');
+  // category breakdown
+  const byCat={};
+  exp.forEach(i=>{ const k=i.category+'|'+i.spend_type; byCat[k]=(byCat[k]||0)+monthly(i); });
+  const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
+  $('catTable').querySelector('tbody').innerHTML = catRows.map(([k,v])=>{
+    const [cat,ty]=k.split('|');
+    return `<tr><td>${esc(cat)}</td><td><span class="badge b-${ty==='personal'?'personal':'business'}">${ty}</span></td><td class="num">${fmt(v)}</td><td class="num">${fmt(v*12)}</td><td class="num">${mExp?Math.round(v/mExp*100):0}%</td></tr>`;
+  }).join('');
+}
+
+// ---------- items (expenses & income tabs) ----------
+function sortBy(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=(k==='vendor'||k==='category')?1:-1;} renderItems(); }
+function getVal(i,k){
+  if(k==='monthly') return monthly(i);
+  if(k==='annual') return annual(i);
+  if(k==='daily') return daily(i);
+  if(k==='amount') return Number(i.amount)||0;
+  if(k==='due_day') return Number(i.due_day)||0;
+  return (i[k]||'').toString().toLowerCase();
+}
+function renderItems(){
+  // EXPENSES
+  const q=$('expSearch').value.toLowerCase(), ty=$('expType').value, cat=$('expCat').value, fr=$('expFreq').value, showInact=$('expInactive').checked;
+  let exp=items.filter(i=>i.kind!=='income')
+    .filter(i=>showInact||i.active!==false)
+    .filter(i=>!ty||i.spend_type===ty).filter(i=>!cat||i.category===cat).filter(i=>!fr||i.frequency===fr)
+    .filter(i=>!q||(i.vendor+' '+(i.description||'')+' '+(i.notes||'')+' '+(i.category||'')).toLowerCase().includes(q));
+  exp.sort((a,b)=>{const x=getVal(a,sortKey),y=getVal(b,sortKey); return (x<y?-1:x>y?1:0)*sortDir;});
+  const rec=exp.filter(i=>i.frequency!=='one-time'&&i.active!==false);
+  const mTot=rec.reduce((s,i)=>s+monthly(i),0);
+  const oneT=exp.filter(i=>i.frequency==='one-time').reduce((s,i)=>s+(+i.amount||0),0);
+  const tbd=exp.filter(i=>(+i.amount||0)===0).length;
+  $('expCards').innerHTML=`
+    <div class="card"><div class="lbl">Monthly</div><div class="val neg">${fmt(mTot)}</div></div>
+    <div class="card"><div class="lbl">Weekly</div><div class="val">${fmt(mTot*12/52.1786)}</div></div>
+    <div class="card"><div class="lbl">Daily</div><div class="val">${fmt(mTot*12/365.25)}</div></div>
+    <div class="card"><div class="lbl">Quarterly</div><div class="val">${fmt(mTot*3)}</div></div>
+    <div class="card"><div class="lbl">Annual</div><div class="val neg">${fmt(mTot*12)}</div></div>
+    <div class="card"><div class="lbl">One-Time (listed)</div><div class="val">${fmt(oneT)}</div><div class="hint">${tbd} items still $0/TBD</div></div>`;
+  $('itemsTable').querySelector('tbody').innerHTML = exp.map(i=>rowHtml(i,false)).join('') || `<tr><td colspan="10" class="muted">No matching items</td></tr>`;
+  $('itemsTable').querySelector('tfoot').innerHTML = `<tr><td colspan="5">Total (${rec.length} recurring shown)</td><td class="num">${fmt(mTot)}</td><td class="num">${fmt(mTot*12)}</td><td colspan="3"></td></tr>`;
+
+  // INCOME
+  const iq=$('incSearch').value.toLowerCase(), icat=$('incCat').value, iInact=$('incInactive').checked;
+  let inc=items.filter(i=>i.kind==='income')
+    .filter(i=>iInact||i.active!==false)
+    .filter(i=>!icat||i.category===icat)
+    .filter(i=>!iq||(i.vendor+' '+(i.notes||'')+' '+(i.category||'')).toLowerCase().includes(iq));
+  inc.sort((a,b)=>{const x=getVal(a,sortKey),y=getVal(b,sortKey); return (x<y?-1:x>y?1:0)*sortDir;});
+  const irec=inc.filter(i=>i.frequency!=='one-time'&&i.active!==false);
+  const mrr=irec.reduce((s,i)=>s+monthly(i),0);
+  $('incCards').innerHTML=`
+    <div class="card"><div class="lbl">MRR</div><div class="val pos">${fmt(mrr)}</div></div>
+    <div class="card"><div class="lbl">DRR</div><div class="val">${fmt(mrr*12/365.25)}</div></div>
+    <div class="card"><div class="lbl">WRR</div><div class="val">${fmt(mrr*12/52.1786)}</div></div>
+    <div class="card"><div class="lbl">QRR</div><div class="val">${fmt(mrr*3)}</div></div>
+    <div class="card"><div class="lbl">ARR</div><div class="val pos">${fmt(mrr*12)}</div></div>
+    <div class="card"><div class="lbl">Streams</div><div class="val">${irec.length}</div><div class="hint">${inc.filter(i=>(+i.amount||0)===0).length} still $0/TBD</div></div>`;
+  $('incomeTable').querySelector('tbody').innerHTML = inc.map(i=>incRowHtml(i)).join('') || `<tr><td colspan="9" class="muted">No income streams</td></tr>`;
+  $('incomeTable').querySelector('tfoot').innerHTML = `<tr><td colspan="4">Total</td><td class="num">${fmt(mrr*12/365.25)}</td><td class="num">${fmt(mrr)}</td><td class="num">${fmt(mrr*12)}</td><td colspan="2"></td></tr>`;
+}
+function rowHtml(i){
+  const tbd=(+i.amount||0)===0;
+  return `<tr style="${i.active===false?'opacity:.45':''}">
+    <td><b>${esc(i.vendor)}</b><div class="muted">${esc(i.description||'')}</div></td>
+    <td>${esc(i.category||'')}</td>
+    <td><span class="badge b-${i.spend_type==='personal'?'personal':'business'}">${i.spend_type}</span></td>
+    <td class="num">${tbd?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
+    <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
+    <td class="num"><b>${i.frequency==='one-time'?'&mdash;':fmt(monthly(i))}</b></td>
+    <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(annual(i))}</td>
+    <td class="num">${i.due_day?('Day '+i.due_day):''}</td>
+    <td class="muted" style="max-width:200px;">${esc(i.notes||'')}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td>
+  </tr>`;
+}
+function incRowHtml(i){
+  const tbd=(+i.amount||0)===0;
+  return `<tr style="${i.active===false?'opacity:.45':''}">
+    <td><b>${esc(i.vendor)}</b><div class="muted">${esc(i.description||'')}</div></td>
+    <td>${esc(i.category||'')}</td>
+    <td class="num">${tbd?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
+    <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
+    <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(daily(i))}</td>
+    <td class="num"><b>${i.frequency==='one-time'?'&mdash;':fmt(monthly(i))}</b></td>
+    <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(annual(i))}</td>
+    <td class="muted" style="max-width:200px;">${esc(i.notes||'')}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td>
+  </tr>`;
+}
+
+// ---------- item CRUD ----------
+function openItemModal(id){
+  editId=id||null;
+  $('itemModalTitle').textContent=id?'Edit Item':'Add Item';
+  const i=id?items.find(x=>x.id===id):null;
+  $('f_vendor').value=i?.vendor||''; $('f_desc').value=i?.description||''; $('f_category').value=i?.category||'';
+  $('f_kind').value=i?.kind|| (currentTab==='income'?'income':'expense');
+  $('f_type').value=i?.spend_type|| (currentTab==='income'?'business':'personal');
+  $('f_amount').value=i?Number(i.amount):''; $('f_freq').value=i?.frequency||'monthly';
+  $('f_due').value=i?.due_day||''; $('f_active').value=String(i?.active!==false); $('f_notes').value=i?.notes||'';
+  $('itemModal').classList.add('show');
+}
+async function saveItem(){
+  const rec={
+    vendor:$('f_vendor').value.trim(), description:$('f_desc').value.trim(), category:$('f_category').value.trim()||'Other',
+    kind:$('f_kind').value, spend_type:$('f_type').value, amount:Number($('f_amount').value)||0,
+    frequency:$('f_freq').value, due_day:$('f_due').value?Number($('f_due').value):null,
+    active:$('f_active').value==='true', notes:$('f_notes').value.trim(), updated_at:new Date().toISOString()
+  };
+  if(!rec.vendor){alert('Vendor is required');return;}
+  const r = editId ? await sb.from('budget_expenses').update(rec).eq('id',editId)
+                   : await sb.from('budget_expenses').insert(rec);
+  if(r.error){alert(r.error.message);return;}
+  closeModal('itemModal'); loadAll();
+}
+async function delItem(id){
+  const i=items.find(x=>x.id===id);
+  if(!confirm(`Delete "${i.vendor}"? (Tip: you can also Edit and mark inactive instead)`))return;
+  const r=await sb.from('budget_expenses').delete().eq('id',id);
+  if(r.error){alert(r.error.message);return;}
+  loadAll();
+}
+
+// ---------- actuals ----------
+function txPreset(p){
+  const now=new Date(); const iso=d=>d.toISOString().slice(0,10);
+  if(p==='month'){ $('txFrom').value=iso(new Date(now.getFullYear(),now.getMonth(),1)); $('txTo').value=iso(now); }
+  if(p==='last'){ $('txFrom').value=iso(new Date(now.getFullYear(),now.getMonth()-1,1)); $('txTo').value=iso(new Date(now.getFullYear(),now.getMonth(),0)); }
+  if(p==='30'){ const d=new Date(now); d.setDate(d.getDate()-30); $('txFrom').value=iso(d); $('txTo').value=iso(now); }
+  if(p==='ytd'){ $('txFrom').value=iso(new Date(now.getFullYear(),0,1)); $('txTo').value=iso(now); }
+  if(p==='all'){ $('txFrom').value=''; $('txTo').value=''; }
+  renderTx();
+}
+function renderTx(){
+  const from=$('txFrom').value, to=$('txTo').value, q=$('txSearch').value.toLowerCase(), kind=$('txKind').value, ty=$('txType').value;
+  let list=txs.filter(t=>(!from||t.tx_date>=from)&&(!to||t.tx_date<=to))
+    .filter(t=>!kind||t.kind===kind).filter(t=>!ty||t.spend_type===ty)
+    .filter(t=>!q||(t.vendor+' '+(t.notes||'')+' '+(t.category||'')).toLowerCase().includes(q));
+  const spent=list.filter(t=>t.kind!=='income').reduce((s,t)=>s+(+t.amount||0),0);
+  const earned=list.filter(t=>t.kind==='income').reduce((s,t)=>s+(+t.amount||0),0);
+  let days=1;
+  if(list.length){
+    const dates=list.map(t=>t.tx_date).sort();
+    const d1=new Date(from||dates[0]), d2=new Date(to||dates[dates.length-1]);
+    days=Math.max(1, Math.round((d2-d1)/86400000)+1);
+  }
+  $('txCards').innerHTML=`
+    <div class="card"><div class="lbl">Actual Spent</div><div class="val neg">${fmt(spent)}</div><div class="hint">${list.filter(t=>t.kind!=='income').length} entries</div></div>
+    <div class="card"><div class="lbl">Actual Income</div><div class="val pos">${fmt(earned)}</div></div>
+    <div class="card"><div class="lbl">Net</div><div class="val ${earned-spent>=0?'pos':'neg'}">${fmt(earned-spent)}</div></div>
+    <div class="card"><div class="lbl">Avg Spend / Day</div><div class="val">${fmt(spent/days)}</div><div class="hint">${days} days in range</div></div>
+    <div class="card"><div class="lbl">Avg Spend / Week</div><div class="val">${fmt(spent/days*7)}</div></div>
+    <div class="card"><div class="lbl">Avg Spend / Month</div><div class="val">${fmt(spent/days*30.4375)}</div></div>`;
+  $('txTable').querySelector('tbody').innerHTML=list.map(t=>`
+    <tr><td class="num">${t.tx_date}</td>
+    <td><b>${esc(t.vendor)}</b></td><td>${esc(t.category||'')}</td>
+    <td><span class="badge b-${t.spend_type==='personal'?'personal':'business'}">${t.spend_type}</span>${t.kind==='income'?' <span class="badge b-income">income</span>':''}</td>
+    <td class="num" style="color:${t.kind==='income'?'var(--green)':'inherit'}">${t.kind==='income'?'+':''}${fmt2(+t.amount)}</td>
+    <td class="muted">${esc(t.notes||'')}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openTxModal('${t.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delTx('${t.id}')">&times;</button></td></tr>`).join('')
+    || `<tr><td colspan="7" class="muted">No actuals logged in this range yet. Click "+ Log Actual" to start feeding real numbers.</td></tr>`;
+  $('txTable').querySelector('tfoot').innerHTML=`<tr><td colspan="4">Totals</td><td class="num">${fmt(earned-spent)}</td><td colspan="2"></td></tr>`;
+}
+function openTxModal(id){
+  editTxId=id||null;
+  $('txModalTitle').textContent=id?'Edit Actual':'Log Actual';
+  const t=id?txs.find(x=>x.id===id):null;
+  $('t_date').value=t?.tx_date||new Date().toISOString().slice(0,10);
+  $('t_vendor').value=t?.vendor||''; $('t_kind').value=t?.kind||'expense'; $('t_type').value=t?.spend_type||'personal';
+  $('t_amount').value=t?Number(t.amount):''; $('t_category').value=t?.category||''; $('t_notes').value=t?.notes||'';
+  $('txModal').classList.add('show');
+}
+$('t_vendor')?.addEventListener('change',()=>{
+  const m=items.find(i=>i.vendor===$('t_vendor').value);
+  if(m){ $('t_category').value=m.category||''; $('t_type').value=m.spend_type; $('t_kind').value=m.kind||'expense'; }
+});
+async function saveTx(){
+  const rec={ tx_date:$('t_date').value, vendor:$('t_vendor').value.trim(), kind:$('t_kind').value,
+    spend_type:$('t_type').value, amount:Number($('t_amount').value)||0, category:$('t_category').value.trim()||'Other', notes:$('t_notes').value.trim() };
+  if(!rec.vendor||!rec.tx_date||!rec.amount){alert('Date, vendor and amount are required');return;}
+  const r = editTxId ? await sb.from('budget_transactions').update(rec).eq('id',editTxId)
+                     : await sb.from('budget_transactions').insert(rec);
+  if(r.error){alert(r.error.message);return;}
+  closeModal('txModal'); loadAll();
+}
+async function delTx(id){
+  if(!confirm('Delete this entry?'))return;
+  const r=await sb.from('budget_transactions').delete().eq('id',id);
+  if(r.error){alert(r.error.message);return;}
+  loadAll();
+}
+
+// ---------- debts ----------
+function renderDebts(){
+  const total=debts.reduce((s,d)=>s+(+d.balance||0),0);
+  const pay=debts.reduce((s,d)=>s+(+d.monthly_payment||0),0);
+  $('debtCards').innerHTML=`
+    <div class="card"><div class="lbl">Total Owed</div><div class="val neg">${fmt(total)}</div><div class="hint">${debts.length} entries</div></div>
+    <div class="card"><div class="lbl">IOUs / Personal Loans</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='iou').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
+    <div class="card"><div class="lbl">Credit Cards</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='credit_card').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
+    <div class="card"><div class="lbl">Committed Monthly Payments</div><div class="val">${fmt(pay)}</div></div>`;
+  const kindLbl={iou:'IOU / Personal Loan', credit_card:'Credit Card', loan:'Loan'};
+  $('debtTable').querySelector('tbody').innerHTML=debts.map(d=>`
+    <tr><td><b>${esc(d.name)}</b></td><td><span class="badge b-freq">${kindLbl[d.debt_kind]||d.debt_kind}</span></td>
+    <td class="num"><b>${fmt(+d.balance)}</b></td><td class="num">${d.monthly_payment?fmt(+d.monthly_payment):''}</td>
+    <td class="muted">${esc(d.notes||'')}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openDebtModal('${d.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delDebt('${d.id}')">&times;</button></td></tr>`).join('')
+    || `<tr><td colspan="6" class="muted">No debts recorded</td></tr>`;
+  $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="2">Total</td><td class="num">${fmt(total)}</td><td class="num">${fmt(pay)}</td><td colspan="2"></td></tr>`;
+}
+function openDebtModal(id){
+  editDebtId=id||null;
+  $('debtModalTitle').textContent=id?'Edit Debt / IOU':'Add Debt / IOU';
+  const d=id?debts.find(x=>x.id===id):null;
+  $('d_name').value=d?.name||''; $('d_kind').value=d?.debt_kind||'iou';
+  $('d_balance').value=d?Number(d.balance):''; $('d_payment').value=d?.monthly_payment?Number(d.monthly_payment):'';
+  $('d_notes').value=d?.notes||'';
+  $('debtModal').classList.add('show');
+}
+async function saveDebt(){
+  const rec={ name:$('d_name').value.trim(), debt_kind:$('d_kind').value, balance:Number($('d_balance').value)||0,
+    monthly_payment:$('d_payment').value?Number($('d_payment').value):null, notes:$('d_notes').value.trim(), updated_at:new Date().toISOString() };
+  if(!rec.name){alert('Name is required');return;}
+  const r = editDebtId ? await sb.from('budget_debts').update(rec).eq('id',editDebtId)
+                       : await sb.from('budget_debts').insert(rec);
+  if(r.error){alert(r.error.message);return;}
+  closeModal('debtModal'); loadAll();
+}
+async function delDebt(id){
+  if(!confirm('Delete this debt entry?'))return;
+  const r=await sb.from('budget_debts').delete().eq('id',id);
+  if(r.error){alert(r.error.message);return;}
+  loadAll();
+}
+
+// ---------- misc ----------
+function closeModal(id){ $(id).classList.remove('show'); }
+document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); }));
+function renderAll(){ renderDashboard(); renderItems(); renderTx(); renderDebts(); }
+txPreset('month');
+loadAll();
+</script>
+</body>
+</html>
