@@ -8,11 +8,11 @@
 <style>
   :root{
     --bg:#ffffff; --panel:#f8fafc; --border:#e2e8f0; --text:#0f172a; --muted:#64748b;
-    --blue:#2563eb; --green:#16a34a; --red:#dc2626; --amber:#d97706; --purple:#7c3aed;
+    --blue:#2563eb; --green:#16a34a; --red:#dc2626; --amber:#d97706; --purple:#7c3aed; --teal:#0d9488;
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px;}
-  .wrap{max-width:1280px; margin:0 auto; padding:20px;}
+  .wrap{max-width:1320px; margin:0 auto; padding:20px;}
   header{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-bottom:16px; border-bottom:2px solid var(--border);}
   header h1{font-size:22px;}
   header .sub{color:var(--muted); font-size:13px;}
@@ -36,7 +36,7 @@
   .btn-danger{background:#fee2e2; color:var(--red);}
   table{width:100%; border-collapse:collapse; background:#fff;}
   th{font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); text-align:left; padding:8px 10px; border-bottom:2px solid var(--border); cursor:pointer; user-select:none; white-space:nowrap;}
-  th .arrow{font-size:9px;}
+  th .arrow{font-size:9px; color:var(--blue);}
   td{padding:9px 10px; border-bottom:1px solid var(--border); vertical-align:top;}
   tr:hover td{background:#f1f5f9;}
   .num{text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap;}
@@ -47,20 +47,20 @@
   .b-income{background:#dcfce7; color:var(--green);}
   .b-freq{background:#f1f5f9; color:var(--muted);}
   .b-tbd{background:#fef3c7; color:var(--amber);}
+  .b-tag{background:#ccfbf1; color:var(--teal); margin:1px;}
+  .b-asset{background:#fce7f3; color:#be185d;}
   .muted{color:var(--muted); font-size:12px;}
   .tblwrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px;}
   tfoot td{font-weight:700; background:var(--panel);}
-  /* modal */
   .overlay{position:fixed; inset:0; background:rgba(15,23,42,.4); display:none; align-items:flex-start; justify-content:center; padding:40px 16px; z-index:50; overflow:auto;}
   .overlay.show{display:flex;}
-  .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:520px; box-shadow:0 20px 50px rgba(0,0,0,.2);}
+  .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:560px; box-shadow:0 20px 50px rgba(0,0,0,.2);}
   .modal h3{margin-bottom:14px;}
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .field{display:flex; flex-direction:column; gap:4px; margin-bottom:10px;}
   .field label{font-size:12px; font-weight:600; color:var(--muted);}
   .field input,.field select,.field textarea{width:100%;}
   .modal .actions{display:flex; justify-content:flex-end; gap:8px; margin-top:14px;}
-  /* gate */
   #gate{position:fixed; inset:0; background:#fff; z-index:100; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;}
   #gate h2{font-size:20px;}
   #gate input{font-size:16px; text-align:center; width:220px;}
@@ -94,6 +94,7 @@
     <div class="tab active" data-tab="dashboard" onclick="setTab('dashboard')">Dashboard</div>
     <div class="tab" data-tab="expenses" onclick="setTab('expenses')">Expenses</div>
     <div class="tab" data-tab="income" onclick="setTab('income')">Income</div>
+    <div class="tab" data-tab="assets" onclick="setTab('assets')">Assets</div>
     <div class="tab" data-tab="actuals" onclick="setTab('actuals')">Actuals / Log</div>
     <div class="tab" data-tab="debts" onclick="setTab('debts')">Debts &amp; IOUs</div>
   </div>
@@ -113,61 +114,54 @@
     </table></div>
   </div>
 
-  <!-- EXPENSES / INCOME (shared renderer) -->
+  <!-- EXPENSES -->
   <div id="tab-expenses" style="display:none;">
     <div class="cards" id="expCards"></div>
     <div class="controls">
-      <input type="search" id="expSearch" placeholder="Search vendor / notes..." oninput="renderItems()">
-      <select id="expType" onchange="renderItems()">
+      <input type="search" id="expSearch" placeholder="Search vendor / notes / tags..." oninput="renderAll()">
+      <select id="expType" onchange="renderAll()">
         <option value="">All Types</option><option value="personal">Personal</option><option value="business">Business</option>
       </select>
-      <select id="expCat" onchange="renderItems()"><option value="">All Categories</option></select>
-      <select id="expFreq" onchange="renderItems()"><option value="">All Frequencies</option></select>
-      <label class="muted"><input type="checkbox" id="expInactive" onchange="renderItems()"> show inactive</label>
+      <select id="expCat" onchange="renderAll()"><option value="">All Categories</option></select>
+      <select id="expFreq" onchange="renderAll()"><option value="">All Frequencies</option></select>
+      <select id="expTag" onchange="renderAll()"><option value="">All Tags</option></select>
+      <label class="muted"><input type="checkbox" id="expInactive" onchange="renderAll()"> show inactive</label>
     </div>
-    <div class="tblwrap"><table id="itemsTable">
-      <thead><tr>
-        <th onclick="sortBy('vendor')">Vendor <span class="arrow"></span></th>
-        <th onclick="sortBy('category')">Category <span class="arrow"></span></th>
-        <th onclick="sortBy('spend_type')">Type <span class="arrow"></span></th>
-        <th class="num" onclick="sortBy('amount')">Amount <span class="arrow"></span></th>
-        <th onclick="sortBy('frequency')">Frequency <span class="arrow"></span></th>
-        <th class="num" onclick="sortBy('monthly')">Monthly Avg <span class="arrow"></span></th>
-        <th class="num" onclick="sortBy('annual')">Annual <span class="arrow"></span></th>
-        <th class="num" onclick="sortBy('due_day')">Due <span class="arrow"></span></th>
-        <th>Notes</th><th></th>
-      </tr></thead>
-      <tbody></tbody><tfoot></tfoot>
-    </table></div>
+    <div class="tblwrap"><table id="itemsTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
   </div>
 
+  <!-- INCOME -->
   <div id="tab-income" style="display:none;">
     <div class="cards" id="incCards"></div>
     <div class="controls">
-      <input type="search" id="incSearch" placeholder="Search stream..." oninput="renderItems()">
-      <select id="incCat" onchange="renderItems()"><option value="">All Categories</option></select>
-      <label class="muted"><input type="checkbox" id="incInactive" onchange="renderItems()"> show inactive</label>
+      <input type="search" id="incSearch" placeholder="Search stream / tags..." oninput="renderAll()">
+      <select id="incCat" onchange="renderAll()"><option value="">All Categories</option></select>
+      <select id="incTag" onchange="renderAll()"><option value="">All Tags</option></select>
+      <label class="muted"><input type="checkbox" id="incInactive" onchange="renderAll()"> show inactive</label>
     </div>
-    <div class="tblwrap"><table id="incomeTable">
-      <thead><tr>
-        <th onclick="sortBy('vendor')">Stream <span class="arrow"></span></th>
-        <th onclick="sortBy('category')">Category <span class="arrow"></span></th>
-        <th class="num" onclick="sortBy('amount')">Amount <span class="arrow"></span></th>
-        <th onclick="sortBy('frequency')">Frequency <span class="arrow"></span></th>
-        <th class="num" onclick="sortBy('daily')">DRR <span class="arrow"></span></th>
-        <th class="num" onclick="sortBy('monthly')">MRR <span class="arrow"></span></th>
-        <th class="num" onclick="sortBy('annual')">ARR <span class="arrow"></span></th>
-        <th>Notes</th><th></th>
-      </tr></thead>
-      <tbody></tbody><tfoot></tfoot>
-    </table></div>
+    <div class="tblwrap"><table id="incomeTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+  </div>
+
+  <!-- ASSETS -->
+  <div id="tab-assets" style="display:none;">
+    <div class="cards" id="assetCards"></div>
+    <div class="controls">
+      <input type="search" id="assetSearch" placeholder="Search assets / tags..." oninput="renderAll()">
+      <select id="assetKind" onchange="renderAll()">
+        <option value="">All Kinds</option><option value="real_estate">Real Estate</option><option value="business">Business</option><option value="vehicle">Vehicle</option><option value="other">Other</option>
+      </select>
+      <select id="assetTag" onchange="renderAll()"><option value="">All Tags</option></select>
+      <div class="toolbar-right"><button class="btn btn-primary" onclick="openAssetModal()">+ Add Asset</button></div>
+    </div>
+    <div class="tblwrap"><table id="assetTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <p class="muted" style="margin-top:8px;">Link an asset to an income stream and its production shows here and on the Income tab. Net worth = assets &minus; debts.</p>
   </div>
 
   <!-- ACTUALS -->
   <div id="tab-actuals" style="display:none;">
     <div class="controls">
-      <span class="muted">From</span><input type="date" id="txFrom" onchange="renderTx()">
-      <span class="muted">To</span><input type="date" id="txTo" onchange="renderTx()">
+      <span class="muted">From</span><input type="date" id="txFrom" onchange="renderAll()">
+      <span class="muted">To</span><input type="date" id="txTo" onchange="renderAll()">
       <button class="btn btn-light btn-sm" onclick="txPreset('month')">This Month</button>
       <button class="btn btn-light btn-sm" onclick="txPreset('last')">Last Month</button>
       <button class="btn btn-light btn-sm" onclick="txPreset('30')">Last 30d</button>
@@ -177,25 +171,25 @@
     </div>
     <div class="cards" id="txCards"></div>
     <div class="controls">
-      <input type="search" id="txSearch" placeholder="Search actuals..." oninput="renderTx()">
-      <select id="txKind" onchange="renderTx()"><option value="">Expenses + Income</option><option value="expense">Expenses only</option><option value="income">Income only</option></select>
-      <select id="txType" onchange="renderTx()"><option value="">All Types</option><option value="personal">Personal</option><option value="business">Business</option></select>
+      <input type="search" id="txSearch" placeholder="Search actuals / tags..." oninput="renderAll()">
+      <select id="txKind" onchange="renderAll()"><option value="">Expenses + Income</option><option value="expense">Expenses only</option><option value="income">Income only</option></select>
+      <select id="txType" onchange="renderAll()"><option value="">All Types</option><option value="personal">Personal</option><option value="business">Business</option></select>
+      <select id="txTag" onchange="renderAll()"><option value="">All Tags</option></select>
     </div>
-    <div class="tblwrap"><table id="txTable">
-      <thead><tr><th>Date</th><th>Vendor / Source</th><th>Category</th><th>Type</th><th class="num">Amount</th><th>Notes</th><th></th></tr></thead>
-      <tbody></tbody><tfoot></tfoot>
-    </table></div>
-    <p class="muted" style="margin-top:8px;">Log real charges/deposits here with dates. The date-range summary above computes actual daily/weekly/monthly averages from what you log.</p>
+    <div class="tblwrap"><table id="txTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <p class="muted" style="margin-top:8px;">Log real charges/deposits here with dates — including one-time income and one-time expenses. The date-range summary computes actual daily/weekly/monthly averages from what you log.</p>
   </div>
 
   <!-- DEBTS -->
   <div id="tab-debts" style="display:none;">
     <div class="cards" id="debtCards"></div>
-    <div class="controls"><div class="toolbar-right"><button class="btn btn-primary" onclick="openDebtModal()">+ Add Debt / IOU</button></div></div>
-    <div class="tblwrap"><table id="debtTable">
-      <thead><tr><th>Name</th><th>Kind</th><th class="num">Balance Owed</th><th class="num">Monthly Payment</th><th>Notes</th><th></th></tr></thead>
-      <tbody></tbody><tfoot></tfoot>
-    </table></div>
+    <div class="controls">
+      <input type="search" id="debtSearch" placeholder="Search debts / tags..." oninput="renderAll()">
+      <select id="debtKindF" onchange="renderAll()"><option value="">All Kinds</option><option value="iou">IOU / Personal Loan</option><option value="credit_card">Credit Card</option><option value="loan">Loan</option></select>
+      <select id="debtTag" onchange="renderAll()"><option value="">All Tags</option></select>
+      <div class="toolbar-right"><button class="btn btn-primary" onclick="openDebtModal()">+ Add Debt / IOU</button></div>
+    </div>
+    <div class="tblwrap"><table id="debtTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
   </div>
 </div>
 
@@ -213,11 +207,32 @@
       <div class="field"><label>Bill Due Day (1-31, optional)</label><input id="f_due" type="number" min="1" max="31"></div>
       <div class="field"><label>Active</label><select id="f_active"><option value="true">Yes</option><option value="false">No</option></select></div>
     </div>
+    <div class="field"><label>Tags (comma separated)</label><input id="f_tags" placeholder="e.g. ai-tools, tax-deductible"></div>
     <div class="field"><label>Description</label><input id="f_desc"></div>
     <div class="field"><label>Notes</label><textarea id="f_notes" rows="2"></textarea></div>
     <div class="actions">
       <button class="btn btn-light" onclick="closeModal('itemModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveItem()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ASSET MODAL -->
+<div class="overlay" id="assetModal">
+  <div class="modal">
+    <h3 id="assetModalTitle">Add Asset</h3>
+    <div class="grid2">
+      <div class="field"><label>Name *</label><input id="a_name"></div>
+      <div class="field"><label>Kind</label><select id="a_kind"><option value="real_estate">Real Estate</option><option value="business">Business</option><option value="vehicle">Vehicle</option><option value="other">Other</option></select></div>
+      <div class="field"><label>Valuation ($)</label><input id="a_valuation" type="number" step="0.01" min="0"></div>
+      <div class="field"><label>Ownership</label><input id="a_ownership" placeholder="Mike / Loren / Joint"></div>
+    </div>
+    <div class="field"><label>Linked Income Stream (optional)</label><select id="a_link"><option value="">None</option></select></div>
+    <div class="field"><label>Tags (comma separated)</label><input id="a_tags" placeholder="e.g. rental, saas"></div>
+    <div class="field"><label>Notes</label><textarea id="a_notes" rows="2"></textarea></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="closeModal('assetModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAsset()">Save</button>
     </div>
   </div>
 </div>
@@ -234,6 +249,7 @@
       <div class="field"><label>Amount ($) *</label><input id="t_amount" type="number" step="0.01" min="0"></div>
       <div class="field"><label>Category</label><input id="t_category" list="catList"></div>
     </div>
+    <div class="field"><label>Tags (comma separated)</label><input id="t_tags" placeholder="e.g. one-time, api-overage"></div>
     <div class="field"><label>Notes</label><input id="t_notes"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="closeModal('txModal')">Cancel</button>
@@ -252,6 +268,7 @@
       <div class="field"><label>Balance Owed ($)</label><input id="d_balance" type="number" step="0.01"></div>
       <div class="field"><label>Monthly Payment ($, optional)</label><input id="d_payment" type="number" step="0.01"></div>
     </div>
+    <div class="field"><label>Tags (comma separated)</label><input id="d_tags" placeholder="e.g. family, wedding"></div>
     <div class="field"><label>Notes</label><input id="d_notes"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="closeModal('debtModal')">Cancel</button>
@@ -278,17 +295,25 @@ const FREQ = {
   'one-time':{label:'One-Time', f:0}
 };
 
-let items=[], txs=[], debts=[];
-let sortKey='monthly', sortDir=-1, currentTab='dashboard', editId=null, editTxId=null, editDebtId=null;
+let items=[], txs=[], debts=[], assets=[];
+let currentTab='dashboard', editId=null, editTxId=null, editDebtId=null, editAssetId=null;
+let sorts = { exp:{k:'monthly',d:-1}, inc:{k:'monthly',d:-1}, asset:{k:'valuation',d:-1}, tx:{k:'tx_date',d:-1}, debt:{k:'balance',d:-1} };
+const STR_KEYS=['vendor','category','name','tags','tx_date','frequency','spend_type','asset_kind','debt_kind','ownership','linked','kind'];
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
 const fmt = n => (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:0, maximumFractionDigits:0});
 const fmt2 = n => (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
-const esc = s => (s||'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const esc = s => (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const monthly = it => (Number(it.amount)||0) * (FREQ[it.frequency]?.f ?? 1);
 const daily = it => monthly(it)*12/365.25;
 const annual = it => monthly(it)*12;
+const chips = o => (o.tags&&o.tags.length ? o.tags.map(t=>`<span class="badge b-tag">${esc(t)}</span>`).join(' ') : '');
+const parseTags = s => (s||'').split(',').map(x=>x.trim().toLowerCase().replace(/\s+/g,'-')).filter(Boolean);
+const hay = o => ((o.vendor||'')+' '+(o.name||'')+' '+(o.description||'')+' '+(o.notes||'')+' '+(o.category||'')+' '+((o.tags||[]).join(' '))).toLowerCase();
+const linkedIncome = a => a.linked_income_id ? items.find(i=>i.id===a.linked_income_id) : null;
+const assetMonthly = a => { const li=linkedIncome(a); return li && li.frequency!=='one-time' ? monthly(li) : 0; };
+const assetOfIncome = i => assets.find(a=>a.linked_income_id===i.id);
 
 function checkGate(){
   if($('gateInput').value === PASSCODE){
@@ -302,32 +327,67 @@ if(localStorage.getItem('mkb_gate')==='1'){ $('gate').style.display='none'; $('a
 function setTab(t){
   currentTab=t;
   document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active', el.dataset.tab===t));
-  ['dashboard','expenses','income','actuals','debts'].forEach(x=>$('tab-'+x).style.display = x===t?'block':'none');
+  ['dashboard','expenses','income','assets','actuals','debts'].forEach(x=>$('tab-'+x).style.display = x===t?'block':'none');
   renderAll();
 }
 
+// ---------- sorting ----------
+function sortT(t,k){
+  const s=sorts[t];
+  if(s.k===k) s.d*=-1; else { s.k=k; s.d = STR_KEYS.includes(k)?1:-1; }
+  renderAll();
+}
+function TH(t,k,label,num){
+  const s=sorts[t]; const ar = s.k===k ? (s.d>0?'&#9650;':'&#9660;') : '';
+  return `<th ${num?'class="num"':''} onclick="sortT('${t}','${k}')">${label} <span class="arrow">${ar}</span></th>`;
+}
+function getVal(o,k){
+  if(k==='monthly') return monthly(o);
+  if(k==='annual') return annual(o);
+  if(k==='daily') return daily(o);
+  if(k==='income_m') return assetMonthly(o);
+  if(k==='linked') return (linkedIncome(o)?.vendor||'').toLowerCase();
+  if(k==='asset_link') return (assetOfIncome(o)?.name||'').toLowerCase();
+  if(k==='tags') return (o.tags||[]).join(', ').toLowerCase();
+  if(['amount','due_day','balance','monthly_payment','valuation'].includes(k)) return Number(o[k])||0;
+  return (o[k]??'').toString().toLowerCase();
+}
+const cmp = t => (a,b)=>{ const x=getVal(a,sorts[t].k), y=getVal(b,sorts[t].k); return (x<y?-1:x>y?1:0)*sorts[t].d; };
+
 // ---------- data ----------
 async function loadAll(){
-  const [a,b,c] = await Promise.all([
-    sb.from('budget_expenses').select('*').order('vendor'),
-    sb.from('budget_transactions').select('*').order('tx_date',{ascending:false}),
-    sb.from('budget_debts').select('*').order('balance',{ascending:false})
+  const [a,b,c,d] = await Promise.all([
+    sb.from('budget_expenses').select('*'),
+    sb.from('budget_transactions').select('*'),
+    sb.from('budget_debts').select('*'),
+    sb.from('budget_assets').select('*')
   ]);
-  if(a.error||b.error||c.error){ alert('Load error: '+(a.error||b.error||c.error).message); return; }
-  items=a.data; txs=b.data; debts=c.data;
+  const err=a.error||b.error||c.error||d.error;
+  if(err){ alert('Load error: '+err.message); return; }
+  items=a.data; txs=b.data; debts=c.data; assets=d.data;
   buildFilters(); renderAll();
 }
 
 function buildFilters(){
   const cats=[...new Set(items.map(i=>i.category).filter(Boolean))].sort();
-  const fill=(sel,arr,all)=>{ const cur=$(sel).value; $(sel).innerHTML=`<option value="">${all}</option>`+arr.map(c=>`<option>${esc(c)}</option>`).join(''); $(sel).value=cur; };
+  const allTags=arr=>[...new Set(arr.flatMap(o=>o.tags||[]))].sort();
+  const fill=(sel,arr,all)=>{ const el=$(sel); const cur=el.value; el.innerHTML=`<option value="">${all}</option>`+arr.map(c=>`<option>${esc(c)}</option>`).join(''); el.value=cur; };
   fill('expCat',cats,'All Categories');
   fill('incCat',cats.filter(c=>items.some(i=>i.kind==='income'&&i.category===c)),'All Categories');
+  fill('expTag',allTags(items.filter(i=>i.kind!=='income')),'All Tags');
+  fill('incTag',allTags(items.filter(i=>i.kind==='income')),'All Tags');
+  fill('txTag',allTags(txs),'All Tags');
+  fill('debtTag',allTags(debts),'All Tags');
+  fill('assetTag',allTags(assets),'All Tags');
   const fr=Object.keys(FREQ); const cur=$('expFreq').value;
   $('expFreq').innerHTML='<option value="">All Frequencies</option>'+fr.map(f=>`<option value="${f}">${FREQ[f].label}</option>`).join(''); $('expFreq').value=cur;
   $('catList').innerHTML=cats.map(c=>`<option>${esc(c)}</option>`).join('');
   $('vendorList').innerHTML=[...new Set(items.map(i=>i.vendor))].sort().map(v=>`<option>${esc(v)}</option>`).join('');
-  const ff=$('f_freq'); ff.innerHTML=fr.map(f=>`<option value="${f}">${FREQ[f].label}</option>`).join(''); ff.value='monthly';
+  const ff=$('f_freq'); const fv=ff.value; ff.innerHTML=fr.map(f=>`<option value="${f}">${FREQ[f].label}</option>`).join(''); ff.value=fv||'monthly';
+  const inc=items.filter(i=>i.kind==='income').sort((x,y)=>x.vendor.localeCompare(y.vendor));
+  const av=$('a_link').value;
+  $('a_link').innerHTML='<option value="">None</option>'+inc.map(i=>`<option value="${i.id}">${esc(i.vendor)}</option>`).join('');
+  $('a_link').value=av;
 }
 
 // ---------- dashboard ----------
@@ -338,6 +398,8 @@ function renderDashboard(){
   const mPers=exp.filter(i=>i.spend_type==='personal').reduce((s,i)=>s+monthly(i),0);
   const mBiz=exp.filter(i=>i.spend_type!=='personal').reduce((s,i)=>s+monthly(i),0);
   const totalDebt=debts.reduce((s,d)=>s+(Number(d.balance)||0),0);
+  const totalAssets=assets.filter(a=>a.active!==false).reduce((s,a)=>s+(Number(a.valuation)||0),0);
+  const netWorth=totalAssets-totalDebt;
   const net=mInc-mExp;
   $('dashCards').innerHTML = `
     <div class="card"><div class="lbl">Monthly Expenses</div><div class="val neg">${fmt(mExp)}</div><div class="hint">${exp.length} recurring items</div></div>
@@ -345,39 +407,30 @@ function renderDashboard(){
     <div class="card"><div class="lbl">Net Monthly</div><div class="val ${net>=0?'pos':'neg'}">${fmt(net)}</div><div class="hint">income &minus; expenses</div></div>
     <div class="card"><div class="lbl">Personal / mo</div><div class="val">${fmt(mPers)}</div></div>
     <div class="card"><div class="lbl">Business / mo</div><div class="val">${fmt(mBiz)}</div></div>
-    <div class="card"><div class="lbl">Total Debt &amp; IOUs</div><div class="val neg">${fmt(totalDebt)}</div><div class="hint">${debts.length} entries</div></div>`;
+    <div class="card"><div class="lbl">Total Assets</div><div class="val pos">${fmt(totalAssets)}</div><div class="hint">${assets.length} assets</div></div>
+    <div class="card"><div class="lbl">Total Debt &amp; IOUs</div><div class="val neg">${fmt(totalDebt)}</div><div class="hint">${debts.length} entries</div></div>
+    <div class="card"><div class="lbl">Net Worth</div><div class="val ${netWorth>=0?'pos':'neg'}">${fmt(netWorth)}</div><div class="hint">assets &minus; debts</div></div>`;
   const per=m=>[m*12/365.25, m*12/52.1786, m, m*3, m*12];
   const rows=[['Expenses',per(mExp),'neg'],['Income',per(mInc),'pos'],['Net',per(net),net>=0?'pos':'neg'],['Personal spend',per(mPers),''],['Business spend',per(mBiz),'']];
   $('rrTable').querySelector('tbody').innerHTML = rows.map(([l,v,cls])=>
-    `<tr><td><b>${l}</b></td>${v.map(x=>`<td class="num ${cls}" style="color:${cls==='pos'?'var(--green)':cls==='neg'?'var(--red)':'inherit'}">${fmt(x)}</td>`).join('')}</tr>`).join('');
-  // category breakdown
+    `<tr><td><b>${l}</b></td>${v.map(x=>`<td class="num" style="color:${cls==='pos'?'var(--green)':cls==='neg'?'var(--red)':'inherit'}">${fmt(x)}</td>`).join('')}</tr>`).join('');
   const byCat={};
   exp.forEach(i=>{ const k=i.category+'|'+i.spend_type; byCat[k]=(byCat[k]||0)+monthly(i); });
-  const catRows=Object.entries(byCat).sort((a,b)=>b[1]-a[1]);
-  $('catTable').querySelector('tbody').innerHTML = catRows.map(([k,v])=>{
+  $('catTable').querySelector('tbody').innerHTML = Object.entries(byCat).sort((a,b)=>b[1]-a[1]).map(([k,v])=>{
     const [cat,ty]=k.split('|');
     return `<tr><td>${esc(cat)}</td><td><span class="badge b-${ty==='personal'?'personal':'business'}">${ty}</span></td><td class="num">${fmt(v)}</td><td class="num">${fmt(v*12)}</td><td class="num">${mExp?Math.round(v/mExp*100):0}%</td></tr>`;
   }).join('');
 }
 
-// ---------- items (expenses & income tabs) ----------
-function sortBy(k){ if(sortKey===k) sortDir*=-1; else {sortKey=k; sortDir=(k==='vendor'||k==='category')?1:-1;} renderItems(); }
-function getVal(i,k){
-  if(k==='monthly') return monthly(i);
-  if(k==='annual') return annual(i);
-  if(k==='daily') return daily(i);
-  if(k==='amount') return Number(i.amount)||0;
-  if(k==='due_day') return Number(i.due_day)||0;
-  return (i[k]||'').toString().toLowerCase();
-}
-function renderItems(){
-  // EXPENSES
-  const q=$('expSearch').value.toLowerCase(), ty=$('expType').value, cat=$('expCat').value, fr=$('expFreq').value, showInact=$('expInactive').checked;
+// ---------- expenses ----------
+function renderExpenses(){
+  const q=$('expSearch').value.toLowerCase(), ty=$('expType').value, cat=$('expCat').value, fr=$('expFreq').value, tag=$('expTag').value, showInact=$('expInactive').checked;
   let exp=items.filter(i=>i.kind!=='income')
     .filter(i=>showInact||i.active!==false)
     .filter(i=>!ty||i.spend_type===ty).filter(i=>!cat||i.category===cat).filter(i=>!fr||i.frequency===fr)
-    .filter(i=>!q||(i.vendor+' '+(i.description||'')+' '+(i.notes||'')+' '+(i.category||'')).toLowerCase().includes(q));
-  exp.sort((a,b)=>{const x=getVal(a,sortKey),y=getVal(b,sortKey); return (x<y?-1:x>y?1:0)*sortDir;});
+    .filter(i=>!tag||(i.tags||[]).includes(tag))
+    .filter(i=>!q||hay(i).includes(q));
+  exp.sort(cmp('exp'));
   const rec=exp.filter(i=>i.frequency!=='one-time'&&i.active!==false);
   const mTot=rec.reduce((s,i)=>s+monthly(i),0);
   const oneT=exp.filter(i=>i.frequency==='one-time').reduce((s,i)=>s+(+i.amount||0),0);
@@ -389,16 +442,37 @@ function renderItems(){
     <div class="card"><div class="lbl">Quarterly</div><div class="val">${fmt(mTot*3)}</div></div>
     <div class="card"><div class="lbl">Annual</div><div class="val neg">${fmt(mTot*12)}</div></div>
     <div class="card"><div class="lbl">One-Time (listed)</div><div class="val">${fmt(oneT)}</div><div class="hint">${tbd} items still $0/TBD</div></div>`;
-  $('itemsTable').querySelector('tbody').innerHTML = exp.map(i=>rowHtml(i,false)).join('') || `<tr><td colspan="10" class="muted">No matching items</td></tr>`;
-  $('itemsTable').querySelector('tfoot').innerHTML = `<tr><td colspan="5">Total (${rec.length} recurring shown)</td><td class="num">${fmt(mTot)}</td><td class="num">${fmt(mTot*12)}</td><td colspan="3"></td></tr>`;
+  $('itemsTable').querySelector('thead').innerHTML='<tr>'+
+    TH('exp','vendor','Vendor')+TH('exp','category','Category')+TH('exp','spend_type','Type')+TH('exp','tags','Tags')+
+    TH('exp','amount','Amount',1)+TH('exp','frequency','Frequency')+TH('exp','monthly','Monthly Avg',1)+TH('exp','annual','Annual',1)+
+    TH('exp','due_day','Due',1)+'<th>Notes</th><th></th></tr>';
+  $('itemsTable').querySelector('tbody').innerHTML = exp.map(i=>{
+    const tbdI=(+i.amount||0)===0;
+    return `<tr style="${i.active===false?'opacity:.45':''}">
+    <td><b>${esc(i.vendor)}</b><div class="muted">${esc(i.description||'')}</div></td>
+    <td>${esc(i.category||'')}</td>
+    <td><span class="badge b-${i.spend_type==='personal'?'personal':'business'}">${i.spend_type}</span></td>
+    <td style="max-width:140px;">${chips(i)}</td>
+    <td class="num">${tbdI?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
+    <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
+    <td class="num"><b>${i.frequency==='one-time'?'&mdash;':fmt(monthly(i))}</b></td>
+    <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(annual(i))}</td>
+    <td class="num">${i.due_day?('Day '+i.due_day):''}</td>
+    <td class="muted" style="max-width:180px;">${esc(i.notes||'')}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td></tr>`;
+  }).join('') || `<tr><td colspan="11" class="muted">No matching items</td></tr>`;
+  $('itemsTable').querySelector('tfoot').innerHTML = `<tr><td colspan="6">Total (${rec.length} recurring shown)</td><td class="num">${fmt(mTot)}</td><td class="num">${fmt(mTot*12)}</td><td colspan="3"></td></tr>`;
+}
 
-  // INCOME
-  const iq=$('incSearch').value.toLowerCase(), icat=$('incCat').value, iInact=$('incInactive').checked;
+// ---------- income ----------
+function renderIncome(){
+  const iq=$('incSearch').value.toLowerCase(), icat=$('incCat').value, itag=$('incTag').value, iInact=$('incInactive').checked;
   let inc=items.filter(i=>i.kind==='income')
     .filter(i=>iInact||i.active!==false)
     .filter(i=>!icat||i.category===icat)
-    .filter(i=>!iq||(i.vendor+' '+(i.notes||'')+' '+(i.category||'')).toLowerCase().includes(iq));
-  inc.sort((a,b)=>{const x=getVal(a,sortKey),y=getVal(b,sortKey); return (x<y?-1:x>y?1:0)*sortDir;});
+    .filter(i=>!itag||(i.tags||[]).includes(itag))
+    .filter(i=>!iq||hay(i).includes(iq));
+  inc.sort(cmp('inc'));
   const irec=inc.filter(i=>i.frequency!=='one-time'&&i.active!==false);
   const mrr=irec.reduce((s,i)=>s+monthly(i),0);
   $('incCards').innerHTML=`
@@ -408,37 +482,94 @@ function renderItems(){
     <div class="card"><div class="lbl">QRR</div><div class="val">${fmt(mrr*3)}</div></div>
     <div class="card"><div class="lbl">ARR</div><div class="val pos">${fmt(mrr*12)}</div></div>
     <div class="card"><div class="lbl">Streams</div><div class="val">${irec.length}</div><div class="hint">${inc.filter(i=>(+i.amount||0)===0).length} still $0/TBD</div></div>`;
-  $('incomeTable').querySelector('tbody').innerHTML = inc.map(i=>incRowHtml(i)).join('') || `<tr><td colspan="9" class="muted">No income streams</td></tr>`;
-  $('incomeTable').querySelector('tfoot').innerHTML = `<tr><td colspan="4">Total</td><td class="num">${fmt(mrr*12/365.25)}</td><td class="num">${fmt(mrr)}</td><td class="num">${fmt(mrr*12)}</td><td colspan="2"></td></tr>`;
-}
-function rowHtml(i){
-  const tbd=(+i.amount||0)===0;
-  return `<tr style="${i.active===false?'opacity:.45':''}">
+  $('incomeTable').querySelector('thead').innerHTML='<tr>'+
+    TH('inc','vendor','Stream')+TH('inc','category','Category')+TH('inc','asset_link','Asset')+TH('inc','tags','Tags')+
+    TH('inc','amount','Amount',1)+TH('inc','frequency','Frequency')+TH('inc','daily','DRR',1)+TH('inc','monthly','MRR',1)+TH('inc','annual','ARR',1)+
+    '<th>Notes</th><th></th></tr>';
+  $('incomeTable').querySelector('tbody').innerHTML = inc.map(i=>{
+    const tbdI=(+i.amount||0)===0; const ast=assetOfIncome(i);
+    return `<tr style="${i.active===false?'opacity:.45':''}">
     <td><b>${esc(i.vendor)}</b><div class="muted">${esc(i.description||'')}</div></td>
     <td>${esc(i.category||'')}</td>
-    <td><span class="badge b-${i.spend_type==='personal'?'personal':'business'}">${i.spend_type}</span></td>
-    <td class="num">${tbd?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
-    <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
-    <td class="num"><b>${i.frequency==='one-time'?'&mdash;':fmt(monthly(i))}</b></td>
-    <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(annual(i))}</td>
-    <td class="num">${i.due_day?('Day '+i.due_day):''}</td>
-    <td class="muted" style="max-width:200px;">${esc(i.notes||'')}</td>
-    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td>
-  </tr>`;
-}
-function incRowHtml(i){
-  const tbd=(+i.amount||0)===0;
-  return `<tr style="${i.active===false?'opacity:.45':''}">
-    <td><b>${esc(i.vendor)}</b><div class="muted">${esc(i.description||'')}</div></td>
-    <td>${esc(i.category||'')}</td>
-    <td class="num">${tbd?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
+    <td>${ast?`<span class="badge b-asset">${esc(ast.name)}</span>`:''}</td>
+    <td style="max-width:140px;">${chips(i)}</td>
+    <td class="num">${tbdI?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
     <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
     <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(daily(i))}</td>
     <td class="num"><b>${i.frequency==='one-time'?'&mdash;':fmt(monthly(i))}</b></td>
     <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(annual(i))}</td>
-    <td class="muted" style="max-width:200px;">${esc(i.notes||'')}</td>
-    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td>
-  </tr>`;
+    <td class="muted" style="max-width:180px;">${esc(i.notes||'')}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td></tr>`;
+  }).join('') || `<tr><td colspan="11" class="muted">No income streams</td></tr>`;
+  $('incomeTable').querySelector('tfoot').innerHTML = `<tr><td colspan="6">Total</td><td class="num">${fmt(mrr*12/365.25)}</td><td class="num">${fmt(mrr)}</td><td class="num">${fmt(mrr*12)}</td><td colspan="2"></td></tr>`;
+}
+
+// ---------- assets ----------
+function renderAssets(){
+  const q=$('assetSearch').value.toLowerCase(), kind=$('assetKind').value, tag=$('assetTag').value;
+  let list=assets.filter(a=>a.active!==false)
+    .filter(a=>!kind||a.asset_kind===kind)
+    .filter(a=>!tag||(a.tags||[]).includes(tag))
+    .filter(a=>!q||(hay(a)+' '+(a.ownership||'').toLowerCase()+' '+(linkedIncome(a)?.vendor||'').toLowerCase()).includes(q));
+  list.sort(cmp('asset'));
+  const totVal=list.reduce((s,a)=>s+(+a.valuation||0),0);
+  const re=list.filter(a=>a.asset_kind==='real_estate').reduce((s,a)=>s+(+a.valuation||0),0);
+  const biz=list.filter(a=>a.asset_kind==='business').reduce((s,a)=>s+(+a.valuation||0),0);
+  const mFromAssets=list.reduce((s,a)=>s+assetMonthly(a),0);
+  const allVal=assets.filter(a=>a.active!==false).reduce((s,a)=>s+(+a.valuation||0),0);
+  const totalDebt=debts.reduce((s,d)=>s+(+d.balance||0),0);
+  $('assetCards').innerHTML=`
+    <div class="card"><div class="lbl">Total Asset Value (shown)</div><div class="val pos">${fmt(totVal)}</div><div class="hint">${list.filter(a=>(+a.valuation||0)===0).length} valuations TBD</div></div>
+    <div class="card"><div class="lbl">Real Estate</div><div class="val">${fmt(re)}</div></div>
+    <div class="card"><div class="lbl">Businesses</div><div class="val">${fmt(biz)}</div></div>
+    <div class="card"><div class="lbl">Income From Assets / mo</div><div class="val pos">${fmt(mFromAssets)}</div><div class="hint">${fmt(mFromAssets*12)} / yr</div></div>
+    <div class="card"><div class="lbl">Net Worth</div><div class="val ${allVal-totalDebt>=0?'pos':'neg'}">${fmt(allVal-totalDebt)}</div><div class="hint">all assets &minus; all debts</div></div>`;
+  $('assetTable').querySelector('thead').innerHTML='<tr>'+
+    TH('asset','name','Asset')+TH('asset','asset_kind','Kind')+TH('asset','ownership','Ownership')+TH('asset','tags','Tags')+
+    TH('asset','valuation','Valuation',1)+TH('asset','linked','Linked Income Stream')+TH('asset','income_m','Income / mo',1)+
+    '<th class="num">Income / yr</th><th>Notes</th><th></th></tr>';
+  const kindLbl={real_estate:'Real Estate', business:'Business', vehicle:'Vehicle', other:'Other'};
+  $('assetTable').querySelector('tbody').innerHTML=list.map(a=>{
+    const li=linkedIncome(a); const m=assetMonthly(a);
+    return `<tr>
+    <td><b>${esc(a.name)}</b></td>
+    <td><span class="badge b-freq">${kindLbl[a.asset_kind]||a.asset_kind}</span></td>
+    <td>${esc(a.ownership||'')}</td>
+    <td style="max-width:140px;">${chips(a)}</td>
+    <td class="num">${(+a.valuation||0)===0?'<span class="badge b-tbd">TBD</span>':`<b>${fmt(+a.valuation)}</b>`}</td>
+    <td>${li?`<span class="badge b-income">${esc(li.vendor)}</span>`:'<span class="muted">none</span>'}</td>
+    <td class="num">${m?fmt(m):''}</td>
+    <td class="num">${m?fmt(m*12):''}</td>
+    <td class="muted" style="max-width:180px;">${esc(a.notes||'')}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openAssetModal('${a.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delAsset('${a.id}')">&times;</button></td></tr>`;
+  }).join('') || `<tr><td colspan="10" class="muted">No assets yet</td></tr>`;
+  $('assetTable').querySelector('tfoot').innerHTML=`<tr><td colspan="4">Total</td><td class="num">${fmt(totVal)}</td><td></td><td class="num">${fmt(mFromAssets)}</td><td class="num">${fmt(mFromAssets*12)}</td><td colspan="2"></td></tr>`;
+}
+function openAssetModal(id){
+  editAssetId=id||null;
+  $('assetModalTitle').textContent=id?'Edit Asset':'Add Asset';
+  const a=id?assets.find(x=>x.id===id):null;
+  $('a_name').value=a?.name||''; $('a_kind').value=a?.asset_kind||'real_estate';
+  $('a_valuation').value=a?Number(a.valuation):''; $('a_ownership').value=a?.ownership||'';
+  $('a_link').value=a?.linked_income_id||''; $('a_tags').value=(a?.tags||[]).join(', '); $('a_notes').value=a?.notes||'';
+  $('assetModal').classList.add('show');
+}
+async function saveAsset(){
+  const rec={ name:$('a_name').value.trim(), asset_kind:$('a_kind').value, valuation:Number($('a_valuation').value)||0,
+    ownership:$('a_ownership').value.trim(), linked_income_id:$('a_link').value||null,
+    tags:parseTags($('a_tags').value), notes:$('a_notes').value.trim(), updated_at:new Date().toISOString() };
+  if(!rec.name){alert('Name is required');return;}
+  const r = editAssetId ? await sb.from('budget_assets').update(rec).eq('id',editAssetId)
+                        : await sb.from('budget_assets').insert(rec);
+  if(r.error){alert(r.error.message);return;}
+  closeModal('assetModal'); loadAll();
+}
+async function delAsset(id){
+  const a=assets.find(x=>x.id===id);
+  if(!confirm(`Delete asset "${a.name}"?`))return;
+  const r=await sb.from('budget_assets').delete().eq('id',id);
+  if(r.error){alert(r.error.message);return;}
+  loadAll();
 }
 
 // ---------- item CRUD ----------
@@ -450,7 +581,8 @@ function openItemModal(id){
   $('f_kind').value=i?.kind|| (currentTab==='income'?'income':'expense');
   $('f_type').value=i?.spend_type|| (currentTab==='income'?'business':'personal');
   $('f_amount').value=i?Number(i.amount):''; $('f_freq').value=i?.frequency||'monthly';
-  $('f_due').value=i?.due_day||''; $('f_active').value=String(i?.active!==false); $('f_notes').value=i?.notes||'';
+  $('f_due').value=i?.due_day||''; $('f_active').value=String(i?.active!==false);
+  $('f_tags').value=(i?.tags||[]).join(', '); $('f_notes').value=i?.notes||'';
   $('itemModal').classList.add('show');
 }
 async function saveItem(){
@@ -458,7 +590,7 @@ async function saveItem(){
     vendor:$('f_vendor').value.trim(), description:$('f_desc').value.trim(), category:$('f_category').value.trim()||'Other',
     kind:$('f_kind').value, spend_type:$('f_type').value, amount:Number($('f_amount').value)||0,
     frequency:$('f_freq').value, due_day:$('f_due').value?Number($('f_due').value):null,
-    active:$('f_active').value==='true', notes:$('f_notes').value.trim(), updated_at:new Date().toISOString()
+    active:$('f_active').value==='true', tags:parseTags($('f_tags').value), notes:$('f_notes').value.trim(), updated_at:new Date().toISOString()
   };
   if(!rec.vendor){alert('Vendor is required');return;}
   const r = editId ? await sb.from('budget_expenses').update(rec).eq('id',editId)
@@ -482,13 +614,15 @@ function txPreset(p){
   if(p==='30'){ const d=new Date(now); d.setDate(d.getDate()-30); $('txFrom').value=iso(d); $('txTo').value=iso(now); }
   if(p==='ytd'){ $('txFrom').value=iso(new Date(now.getFullYear(),0,1)); $('txTo').value=iso(now); }
   if(p==='all'){ $('txFrom').value=''; $('txTo').value=''; }
-  renderTx();
+  renderAll();
 }
 function renderTx(){
-  const from=$('txFrom').value, to=$('txTo').value, q=$('txSearch').value.toLowerCase(), kind=$('txKind').value, ty=$('txType').value;
+  const from=$('txFrom').value, to=$('txTo').value, q=$('txSearch').value.toLowerCase(), kind=$('txKind').value, ty=$('txType').value, tag=$('txTag').value;
   let list=txs.filter(t=>(!from||t.tx_date>=from)&&(!to||t.tx_date<=to))
     .filter(t=>!kind||t.kind===kind).filter(t=>!ty||t.spend_type===ty)
-    .filter(t=>!q||(t.vendor+' '+(t.notes||'')+' '+(t.category||'')).toLowerCase().includes(q));
+    .filter(t=>!tag||(t.tags||[]).includes(tag))
+    .filter(t=>!q||hay(t).includes(q));
+  list.sort(cmp('tx'));
   const spent=list.filter(t=>t.kind!=='income').reduce((s,t)=>s+(+t.amount||0),0);
   const earned=list.filter(t=>t.kind==='income').reduce((s,t)=>s+(+t.amount||0),0);
   let days=1;
@@ -504,15 +638,19 @@ function renderTx(){
     <div class="card"><div class="lbl">Avg Spend / Day</div><div class="val">${fmt(spent/days)}</div><div class="hint">${days} days in range</div></div>
     <div class="card"><div class="lbl">Avg Spend / Week</div><div class="val">${fmt(spent/days*7)}</div></div>
     <div class="card"><div class="lbl">Avg Spend / Month</div><div class="val">${fmt(spent/days*30.4375)}</div></div>`;
+  $('txTable').querySelector('thead').innerHTML='<tr>'+
+    TH('tx','tx_date','Date')+TH('tx','vendor','Vendor / Source')+TH('tx','category','Category')+TH('tx','spend_type','Type')+TH('tx','tags','Tags')+
+    TH('tx','amount','Amount',1)+'<th>Notes</th><th></th></tr>';
   $('txTable').querySelector('tbody').innerHTML=list.map(t=>`
     <tr><td class="num">${t.tx_date}</td>
     <td><b>${esc(t.vendor)}</b></td><td>${esc(t.category||'')}</td>
     <td><span class="badge b-${t.spend_type==='personal'?'personal':'business'}">${t.spend_type}</span>${t.kind==='income'?' <span class="badge b-income">income</span>':''}</td>
+    <td style="max-width:140px;">${chips(t)}</td>
     <td class="num" style="color:${t.kind==='income'?'var(--green)':'inherit'}">${t.kind==='income'?'+':''}${fmt2(+t.amount)}</td>
     <td class="muted">${esc(t.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openTxModal('${t.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delTx('${t.id}')">&times;</button></td></tr>`).join('')
-    || `<tr><td colspan="7" class="muted">No actuals logged in this range yet. Click "+ Log Actual" to start feeding real numbers.</td></tr>`;
-  $('txTable').querySelector('tfoot').innerHTML=`<tr><td colspan="4">Totals</td><td class="num">${fmt(earned-spent)}</td><td colspan="2"></td></tr>`;
+    || `<tr><td colspan="8" class="muted">No actuals logged in this range yet. Click "+ Log Actual" to start feeding real numbers.</td></tr>`;
+  $('txTable').querySelector('tfoot').innerHTML=`<tr><td colspan="5">Totals</td><td class="num">${fmt(earned-spent)}</td><td colspan="2"></td></tr>`;
 }
 function openTxModal(id){
   editTxId=id||null;
@@ -520,7 +658,8 @@ function openTxModal(id){
   const t=id?txs.find(x=>x.id===id):null;
   $('t_date').value=t?.tx_date||new Date().toISOString().slice(0,10);
   $('t_vendor').value=t?.vendor||''; $('t_kind').value=t?.kind||'expense'; $('t_type').value=t?.spend_type||'personal';
-  $('t_amount').value=t?Number(t.amount):''; $('t_category').value=t?.category||''; $('t_notes').value=t?.notes||'';
+  $('t_amount').value=t?Number(t.amount):''; $('t_category').value=t?.category||'';
+  $('t_tags').value=(t?.tags||[]).join(', '); $('t_notes').value=t?.notes||'';
   $('txModal').classList.add('show');
 }
 $('t_vendor')?.addEventListener('change',()=>{
@@ -529,7 +668,8 @@ $('t_vendor')?.addEventListener('change',()=>{
 });
 async function saveTx(){
   const rec={ tx_date:$('t_date').value, vendor:$('t_vendor').value.trim(), kind:$('t_kind').value,
-    spend_type:$('t_type').value, amount:Number($('t_amount').value)||0, category:$('t_category').value.trim()||'Other', notes:$('t_notes').value.trim() };
+    spend_type:$('t_type').value, amount:Number($('t_amount').value)||0, category:$('t_category').value.trim()||'Other',
+    tags:parseTags($('t_tags').value), notes:$('t_notes').value.trim() };
   if(!rec.vendor||!rec.tx_date||!rec.amount){alert('Date, vendor and amount are required');return;}
   const r = editTxId ? await sb.from('budget_transactions').update(rec).eq('id',editTxId)
                      : await sb.from('budget_transactions').insert(rec);
@@ -545,21 +685,32 @@ async function delTx(id){
 
 // ---------- debts ----------
 function renderDebts(){
+  const q=$('debtSearch').value.toLowerCase(), kf=$('debtKindF').value, tag=$('debtTag').value;
+  let list=debts
+    .filter(d=>!kf||d.debt_kind===kf)
+    .filter(d=>!tag||(d.tags||[]).includes(tag))
+    .filter(d=>!q||hay(d).includes(q));
+  list.sort(cmp('debt'));
   const total=debts.reduce((s,d)=>s+(+d.balance||0),0);
-  const pay=debts.reduce((s,d)=>s+(+d.monthly_payment||0),0);
+  const shown=list.reduce((s,d)=>s+(+d.balance||0),0);
+  const pay=list.reduce((s,d)=>s+(+d.monthly_payment||0),0);
   $('debtCards').innerHTML=`
-    <div class="card"><div class="lbl">Total Owed</div><div class="val neg">${fmt(total)}</div><div class="hint">${debts.length} entries</div></div>
+    <div class="card"><div class="lbl">Total Owed (all)</div><div class="val neg">${fmt(total)}</div><div class="hint">${debts.length} entries</div></div>
     <div class="card"><div class="lbl">IOUs / Personal Loans</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='iou').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
     <div class="card"><div class="lbl">Credit Cards</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='credit_card').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
     <div class="card"><div class="lbl">Committed Monthly Payments</div><div class="val">${fmt(pay)}</div></div>`;
   const kindLbl={iou:'IOU / Personal Loan', credit_card:'Credit Card', loan:'Loan'};
-  $('debtTable').querySelector('tbody').innerHTML=debts.map(d=>`
+  $('debtTable').querySelector('thead').innerHTML='<tr>'+
+    TH('debt','name','Name')+TH('debt','debt_kind','Kind')+TH('debt','tags','Tags')+
+    TH('debt','balance','Balance Owed',1)+TH('debt','monthly_payment','Monthly Payment',1)+'<th>Notes</th><th></th></tr>';
+  $('debtTable').querySelector('tbody').innerHTML=list.map(d=>`
     <tr><td><b>${esc(d.name)}</b></td><td><span class="badge b-freq">${kindLbl[d.debt_kind]||d.debt_kind}</span></td>
+    <td style="max-width:140px;">${chips(d)}</td>
     <td class="num"><b>${fmt(+d.balance)}</b></td><td class="num">${d.monthly_payment?fmt(+d.monthly_payment):''}</td>
     <td class="muted">${esc(d.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openDebtModal('${d.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delDebt('${d.id}')">&times;</button></td></tr>`).join('')
-    || `<tr><td colspan="6" class="muted">No debts recorded</td></tr>`;
-  $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="2">Total</td><td class="num">${fmt(total)}</td><td class="num">${fmt(pay)}</td><td colspan="2"></td></tr>`;
+    || `<tr><td colspan="7" class="muted">No debts recorded</td></tr>`;
+  $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="3">Total (shown)</td><td class="num">${fmt(shown)}</td><td class="num">${fmt(pay)}</td><td colspan="2"></td></tr>`;
 }
 function openDebtModal(id){
   editDebtId=id||null;
@@ -567,12 +718,13 @@ function openDebtModal(id){
   const d=id?debts.find(x=>x.id===id):null;
   $('d_name').value=d?.name||''; $('d_kind').value=d?.debt_kind||'iou';
   $('d_balance').value=d?Number(d.balance):''; $('d_payment').value=d?.monthly_payment?Number(d.monthly_payment):'';
-  $('d_notes').value=d?.notes||'';
+  $('d_tags').value=(d?.tags||[]).join(', '); $('d_notes').value=d?.notes||'';
   $('debtModal').classList.add('show');
 }
 async function saveDebt(){
   const rec={ name:$('d_name').value.trim(), debt_kind:$('d_kind').value, balance:Number($('d_balance').value)||0,
-    monthly_payment:$('d_payment').value?Number($('d_payment').value):null, notes:$('d_notes').value.trim(), updated_at:new Date().toISOString() };
+    monthly_payment:$('d_payment').value?Number($('d_payment').value):null,
+    tags:parseTags($('d_tags').value), notes:$('d_notes').value.trim(), updated_at:new Date().toISOString() };
   if(!rec.name){alert('Name is required');return;}
   const r = editDebtId ? await sb.from('budget_debts').update(rec).eq('id',editDebtId)
                        : await sb.from('budget_debts').insert(rec);
@@ -589,7 +741,7 @@ async function delDebt(id){
 // ---------- misc ----------
 function closeModal(id){ $(id).classList.remove('show'); }
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); }));
-function renderAll(){ renderDashboard(); renderItems(); renderTx(); renderDebts(); }
+function renderAll(){ renderDashboard(); renderExpenses(); renderIncome(); renderAssets(); renderTx(); renderDebts(); }
 txPreset('month');
 loadAll();
 </script>
