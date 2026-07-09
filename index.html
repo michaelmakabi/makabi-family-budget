@@ -12,7 +12,7 @@
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px;}
-  .wrap{max-width:1360px; margin:0 auto; padding:20px;}
+  .wrap{max-width:1400px; margin:0 auto; padding:20px;}
   header{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-bottom:16px; border-bottom:2px solid var(--border);}
   header h1{font-size:22px;}
   header .sub{color:var(--muted); font-size:13px;}
@@ -52,6 +52,8 @@
   .b-debt{background:#fee2e2; color:var(--red);}
   .b-warn{background:#fef3c7; color:var(--amber);}
   .b-pts{background:#e0e7ff; color:#4338ca;}
+  .b-mike{background:#dbeafe; color:#1d4ed8;}
+  .b-loren{background:#fce7f3; color:#be185d;}
   .muted{color:var(--muted); font-size:12px;}
   .tblwrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px;}
   tfoot td{font-weight:700; background:var(--panel);}
@@ -145,18 +147,23 @@
         <option value="business">Business only</option>
         <option value="personal">Personal only</option>
       </select>
+      <select id="plOwner" onchange="renderAll()">
+        <option value="">Everyone</option><option value="michael">Michael</option><option value="loren">Loren</option><option value="joint">Joint</option>
+      </select>
       <span class="muted" id="plRangeWrap" style="display:none;">From <input type="date" id="plFrom" onchange="renderAll()"> To <input type="date" id="plTo" onchange="renderAll()"></span>
     </div>
     <div class="cards" id="plCards"></div>
     <div class="tblwrap"><table id="plTable"><thead></thead><tbody></tbody></table></div>
-    <p class="muted" style="margin-top:8px;">QuickBooks-style layout: main categories &rarr; subcategories &rarr; line items. Budget mode projects from recurring items; Actuals mode builds from logged transactions (one-time items appear there).</p>
+    <p class="muted" style="margin-top:8px;">QuickBooks-style layout: main categories &rarr; subcategories &rarr; line items. Filter by person to see Michael-only or Loren-only P&amp;L.</p>
   </div>
 
   <!-- BALANCE SHEET -->
   <div id="tab-bs" style="display:none;">
     <div class="cards" id="bsCards"></div>
     <div class="tblwrap"><table id="bsTable"><thead></thead><tbody></tbody></table></div>
-    <p class="muted" style="margin-top:8px;">QuickBooks-style balance sheet as of today. Assets use Owner Value when set, otherwise the AI/auto estimate. Liabilities pull from the Debts tab. Equity = Assets &minus; Liabilities.</p>
+    <div class="section-title" style="display:flex;align-items:center;">Bank Accounts (Cash) <span class="toolbar-right"><button class="btn btn-primary btn-sm" onclick="openAcctModal()">+ Add Account</button></span></div>
+    <div class="tblwrap"><table id="acctTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <p class="muted" style="margin-top:8px;">Cash feeds Current Assets above. Update balances anytime — or paste fresh screenshots to Claude and it will update them for you.</p>
   </div>
 
   <!-- EXPENSES -->
@@ -164,6 +171,7 @@
     <div class="cards" id="expCards"></div>
     <div class="controls">
       <input type="search" id="expSearch" placeholder="Search vendor / notes / tags..." oninput="renderAll()">
+      <select id="expOwner" onchange="renderAll()"><option value="">Everyone</option><option value="michael">Michael</option><option value="loren">Loren</option><option value="joint">Joint</option></select>
       <select id="expType" onchange="renderAll()">
         <option value="">All Types</option><option value="personal">Personal</option><option value="business">Business</option>
       </select>
@@ -181,6 +189,7 @@
     <div class="cards" id="incCards"></div>
     <div class="controls">
       <input type="search" id="incSearch" placeholder="Search stream / tags..." oninput="renderAll()">
+      <select id="incOwner" onchange="renderAll()"><option value="">Everyone</option><option value="michael">Michael</option><option value="loren">Loren</option><option value="joint">Joint</option></select>
       <select id="incCat" onchange="renderAll()"><option value="">All Categories</option></select>
       <select id="incTag" onchange="renderAll()"><option value="">All Tags</option></select>
       <label class="muted"><input type="checkbox" id="incInactive" onchange="renderAll()"> show inactive</label>
@@ -193,6 +202,7 @@
     <div class="cards" id="assetCards"></div>
     <div class="controls">
       <input type="search" id="assetSearch" placeholder="Search assets / address / tags..." oninput="renderAll()">
+      <select id="assetOwner" onchange="renderAll()"><option value="">Everyone</option><option value="michael">Michael</option><option value="loren">Loren</option><option value="joint">Joint</option></select>
       <select id="assetKind" onchange="renderAll()">
         <option value="">All Kinds</option><option value="real_estate">Real Estate</option><option value="business">Business</option><option value="vehicle">Vehicle</option><option value="other">Other</option>
       </select>
@@ -200,7 +210,7 @@
       <div class="toolbar-right"><button class="btn btn-primary" onclick="openAssetModal()">+ Add Asset</button></div>
     </div>
     <div class="tblwrap"><table id="assetTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="muted" style="margin-top:8px;">Business estimates auto-recalculate from linked income (ARR/SDE multiples), growth, margin, years and logged CapEx — click the value to see the reasoning. Real estate: add the full address, then ask Claude in chat to research market value and it will fill the AI Estimate. Owner Value (your appraisal/opinion) overrides the estimate in Net Worth when set.</p>
+    <p class="muted" style="margin-top:8px;">Business estimates auto-recalculate from linked income, growth, margin, years and logged CapEx — click a value for the reasoning. Owner Value overrides the estimate in Net Worth when set.</p>
   </div>
 
   <!-- ACTUALS -->
@@ -218,6 +228,7 @@
     <div class="cards" id="txCards"></div>
     <div class="controls">
       <input type="search" id="txSearch" placeholder="Search actuals / tags..." oninput="renderAll()">
+      <select id="txOwner" onchange="renderAll()"><option value="">Everyone</option><option value="michael">Michael</option><option value="loren">Loren</option><option value="joint">Joint</option></select>
       <select id="txKind" onchange="renderAll()"><option value="">Expenses + Income</option><option value="expense">Expenses only</option><option value="income">Income only</option></select>
       <select id="txType" onchange="renderAll()"><option value="">All Types</option><option value="personal">Personal</option><option value="business">Business</option></select>
       <select id="txTag" onchange="renderAll()"><option value="">All Tags</option></select>
@@ -231,12 +242,13 @@
     <div class="cards" id="debtCards"></div>
     <div class="controls">
       <input type="search" id="debtSearch" placeholder="Search debts / details / tags..." oninput="renderAll()">
+      <select id="debtOwner" onchange="renderAll()"><option value="">Everyone</option><option value="michael">Michael</option><option value="loren">Loren</option><option value="joint">Joint</option></select>
       <select id="debtKindF" onchange="renderAll()"><option value="">All Kinds</option><option value="iou">IOU / Personal Loan</option><option value="credit_card">Credit Card</option><option value="loan">Loan / Mortgage</option></select>
       <select id="debtTag" onchange="renderAll()"><option value="">All Tags</option></select>
       <div class="toolbar-right"><button class="btn btn-primary" onclick="openDebtModal()">+ Add Debt / IOU</button></div>
     </div>
     <div class="tblwrap"><table id="debtTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="muted" style="margin-top:8px;">Click any debt's name to open its full record — servicer, loan number, insurance providers &amp; policy numbers, escrow, portal links, who manages it, and more. Debts correlate with expenses and points across tabs.</p>
+    <p class="muted" style="margin-top:8px;">Click any debt's name to open its full record — servicer, loan number, insurance, escrow, portal links, who manages it. Filter by person to see Michael's vs Loren's obligations.</p>
   </div>
 
   <!-- POINTS -->
@@ -244,11 +256,12 @@
     <div class="cards" id="ptsCards"></div>
     <div class="controls">
       <input type="search" id="ptsSearch" placeholder="Search programs / tags..." oninput="renderAll()">
+      <select id="ptsOwner" onchange="renderAll()"><option value="">Everyone</option><option value="michael">Michael</option><option value="loren">Loren</option><option value="joint">Joint</option></select>
       <select id="ptsKindF" onchange="renderAll()"><option value="">All Kinds</option><option value="credit_card">Credit Card</option><option value="airline">Airline</option><option value="hotel">Hotel</option><option value="other">Other</option></select>
       <div class="toolbar-right"><button class="btn btn-primary" onclick="openPtsModal()">+ Add Program</button></div>
     </div>
     <div class="tblwrap"><table id="ptsTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="muted" style="margin-top:8px;">Track card points and transferred balances (airlines, hotels). Link card programs to their credit card on the Debts tab and the points cross-reference there too. Programs expiring within 90 days get flagged.</p>
+    <p class="muted" style="margin-top:8px;">Card points cross-reference the Debts tab; transferred balances (airlines, hotels) track expiration. Programs expiring within 90 days get flagged.</p>
   </div>
 </div>
 
@@ -261,15 +274,18 @@
       <div class="field"><label>Category (subcategory)</label><input id="f_category" list="catList"><datalist id="catList"></datalist></div>
       <div class="field"><label>Kind</label><select id="f_kind"><option value="expense">Expense</option><option value="income">Income</option></select></div>
       <div class="field"><label>Personal / Business</label><select id="f_type"><option value="personal">Personal</option><option value="business">Business</option></select></div>
+      <div class="field"><label>Whose? </label><select id="f_owner"><option value="joint">Joint (Ours)</option><option value="michael">Michael</option><option value="loren">Loren</option></select></div>
       <div class="field"><label>Amount ($)</label><input id="f_amount" type="number" step="0.01" min="0"></div>
       <div class="field"><label>Frequency</label><select id="f_freq"></select></div>
       <div class="field"><label>Bill Due Day (1-31, optional)</label><input id="f_due" type="number" min="1" max="31"></div>
+    </div>
+    <div class="grid2">
       <div class="field"><label>Active</label><select id="f_active"><option value="true">Yes</option><option value="false">No</option></select></div>
+      <div class="field"><label>Tags (comma separated)</label><input id="f_tags" placeholder="e.g. ai-tools"></div>
     </div>
     <div class="field"><label>Linked Debt (mortgage / credit card / loan this payment services)</label>
       <select id="f_debt"><option value="">None</option></select>
     </div>
-    <div class="field"><label>Tags (comma separated)</label><input id="f_tags" placeholder="e.g. ai-tools, tax-deductible"></div>
     <div class="field"><label>Description</label><input id="f_desc"></div>
     <div class="field"><label>Notes</label><textarea id="f_notes" rows="2"></textarea></div>
     <div class="actions">
@@ -286,9 +302,10 @@
     <div class="grid2">
       <div class="field"><label>Name *</label><input id="a_name"></div>
       <div class="field"><label>Kind</label><select id="a_kind" onchange="assetKindUI()"><option value="real_estate">Real Estate</option><option value="business">Business</option><option value="vehicle">Vehicle</option><option value="other">Other</option></select></div>
-      <div class="field"><label>Ownership</label><input id="a_ownership" placeholder="Mike / Loren / Joint"></div>
+      <div class="field"><label>Whose?</label><select id="a_owner_sel"><option value="joint">Joint (Ours)</option><option value="michael">Michael</option><option value="loren">Loren</option></select></div>
+      <div class="field"><label>Ownership note</label><input id="a_ownership" placeholder="Mike / Loren / Joint"></div>
       <div class="field"><label>Purchase Price / Initial Investment ($)</label><input id="a_purchase" type="number" step="0.01" min="0"></div>
-      <div class="field"><label>Owner / Appraised Value ($) <span class="muted">(your opinion — overrides estimate)</span></label><input id="a_owner" type="number" step="0.01" min="0"></div>
+      <div class="field"><label>Owner / Appraised Value ($) <span class="muted">(overrides estimate)</span></label><input id="a_owner" type="number" step="0.01" min="0"></div>
       <div class="field"><label>Valuation Method</label><select id="a_method"><option value="auto">Auto (AI/formula estimate)</option><option value="manual">Manual (owner value only)</option></select></div>
     </div>
     <div class="field" id="a_addr_wrap"><label>Full Address (real estate — used for market lookups)</label><input id="a_address" placeholder="123 Main St, City, FL 33xxx"></div>
@@ -325,11 +342,14 @@
       <div class="field"><label>Vendor / Source *</label><input id="t_vendor" list="vendorList"><datalist id="vendorList"></datalist></div>
       <div class="field"><label>Kind</label><select id="t_kind"><option value="expense">Expense</option><option value="income">Income</option></select></div>
       <div class="field"><label>Personal / Business</label><select id="t_type"><option value="personal">Personal</option><option value="business">Business</option></select></div>
+      <div class="field"><label>Whose?</label><select id="t_owner"><option value="joint">Joint (Ours)</option><option value="michael">Michael</option><option value="loren">Loren</option></select></div>
       <div class="field"><label>Amount ($) *</label><input id="t_amount" type="number" step="0.01" min="0"></div>
+    </div>
+    <div class="grid2">
       <div class="field"><label>Category (subcategory)</label><input id="t_category" list="catList"></div>
+      <div class="field"><label>Tags (comma separated)</label><input id="t_tags" placeholder="e.g. one-time, capex"></div>
     </div>
     <div class="field"><label>Link to Asset (CapEx / asset-related — feeds valuation)</label><select id="t_asset"><option value="">None</option></select></div>
-    <div class="field"><label>Tags (comma separated)</label><input id="t_tags" placeholder="e.g. one-time, capex"></div>
     <div class="field"><label>Notes</label><input id="t_notes"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="closeModal('txModal')">Cancel</button>
@@ -345,13 +365,14 @@
     <div class="grid2">
       <div class="field"><label>Name *</label><input id="d_name"></div>
       <div class="field"><label>Kind</label><select id="d_kind"><option value="iou">IOU / Personal Loan</option><option value="credit_card">Credit Card</option><option value="loan">Loan / Mortgage</option></select></div>
+      <div class="field"><label>Whose?</label><select id="d_owner"><option value="joint">Joint (Ours)</option><option value="michael">Michael</option><option value="loren">Loren</option></select></div>
       <div class="field"><label>Balance Owed ($)</label><input id="d_balance" type="number" step="0.01"></div>
       <div class="field"><label>Monthly Payment ($, optional)</label><input id="d_payment" type="number" step="0.01"></div>
+      <div class="field"><label>Tags (comma separated)</label><input id="d_tags" placeholder="e.g. family, mortgage"></div>
     </div>
     <div class="field" id="d_mkexp_wrap"><label class="muted" style="font-weight:400;"><input type="checkbox" id="d_mkexp"> Also create a matching monthly payment <b>expense</b> linked to this debt (in tandem)</label></div>
-    <div class="field"><label>Details — one per line, <b>Key: Value</b> (servicer, loan #, insurance provider &amp; policy #, escrow, portal URL, who manages it...)</label>
-      <textarea id="d_details" rows="7" placeholder="Servicer: Selene Finance LP&#10;Loan Number: 123456789&#10;Interest Rate: 7.25% fixed 30-yr&#10;Homeowners Insurance: Provider - policy #ABC123&#10;Portal: https://...&#10;Managed By: Mike"></textarea></div>
-    <div class="field"><label>Tags (comma separated)</label><input id="d_tags" placeholder="e.g. family, mortgage"></div>
+    <div class="field"><label>Details — one per line, <b>Key: Value</b> (servicer, loan #, insurance &amp; policy #s, escrow, portal URL, who manages it...)</label>
+      <textarea id="d_details" rows="7" placeholder="Servicer: Selene Finance LP&#10;Loan Number: 123456789&#10;Interest Rate: 7.25% fixed 30-yr&#10;Portal: https://..."></textarea></div>
     <div class="field"><label>Notes</label><input id="d_notes"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="closeModal('debtModal')">Cancel</button>
@@ -377,18 +398,39 @@
   <div class="modal">
     <h3 id="ptsModalTitle">Add Points Program</h3>
     <div class="grid2">
-      <div class="field"><label>Program *</label><input id="p_program" placeholder="e.g. Amex Membership Rewards, Emirates Skywards"></div>
+      <div class="field"><label>Program *</label><input id="p_program" placeholder="e.g. Amex Membership Rewards"></div>
       <div class="field"><label>Kind</label><select id="p_kind"><option value="credit_card">Credit Card</option><option value="airline">Airline</option><option value="hotel">Hotel</option><option value="other">Other</option></select></div>
+      <div class="field"><label>Whose?</label><select id="p_owner"><option value="joint">Joint (Ours)</option><option value="michael">Michael</option><option value="loren">Loren</option></select></div>
       <div class="field"><label>Points Balance</label><input id="p_balance" type="number" step="1" min="0"></div>
       <div class="field"><label>Est. Value (¢ per point)</label><input id="p_cpp" type="number" step="0.1" min="0" placeholder="1.0"></div>
       <div class="field"><label>Linked Credit Card (optional)</label><select id="p_card"><option value="">None</option></select></div>
       <div class="field"><label>Expiration Date (optional)</label><input id="p_expires" type="date"></div>
+      <div class="field"><label>Tags (comma separated)</label><input id="p_tags" placeholder="e.g. travel"></div>
     </div>
-    <div class="field"><label>Tags (comma separated)</label><input id="p_tags" placeholder="e.g. travel"></div>
     <div class="field"><label>Notes</label><input id="p_notes"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="closeModal('ptsModal')">Cancel</button>
       <button class="btn btn-primary" onclick="savePts()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ACCOUNT MODAL -->
+<div class="overlay" id="acctModal">
+  <div class="modal">
+    <h3 id="acctModalTitle">Add Bank Account</h3>
+    <div class="grid2">
+      <div class="field"><label>Account Name *</label><input id="ac_name" placeholder="e.g. All Income"></div>
+      <div class="field"><label>Bank</label><input id="ac_bank" placeholder="e.g. Chase for Business"></div>
+      <div class="field"><label>Last 4 Digits</label><input id="ac_last4" maxlength="4"></div>
+      <div class="field"><label>Type</label><select id="ac_type"><option value="checking">Checking</option><option value="savings">Savings</option><option value="other">Other</option></select></div>
+      <div class="field"><label>Balance ($)</label><input id="ac_balance" type="number" step="0.01"></div>
+      <div class="field"><label>Whose?</label><select id="ac_owner"><option value="joint">Joint (Ours)</option><option value="michael">Michael</option><option value="loren">Loren</option></select></div>
+    </div>
+    <div class="field"><label>Notes</label><input id="ac_notes"></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="closeModal('acctModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveAcct()">Save</button>
     </div>
   </div>
 </div>
@@ -420,7 +462,6 @@ const FREQ = {
   'one-time':{label:'One-Time', f:0}
 };
 
-// QuickBooks-style chart of accounts: main category -> subcategories
 const COA = {
   income: {
     'Sales & Service Revenue': ['SaaS Income','Real Estate Income','Office Income','Consulting Income','Other Sales'],
@@ -454,10 +495,10 @@ function parentOf(cat, kind){
 }
 const ALL_SUBCATS = [...new Set([...Object.values(COA.income).flat(), ...Object.values(COA.expense).flat()])].sort();
 
-let items=[], txs=[], debts=[], assets=[], points=[];
-let currentTab='dashboard', editId=null, editTxId=null, editDebtId=null, editAssetId=null, editPtsId=null, viewDebtId=null;
-let sorts = { exp:{k:'monthly',d:-1}, inc:{k:'monthly',d:-1}, asset:{k:'effective',d:-1}, tx:{k:'tx_date',d:-1}, debt:{k:'balance',d:-1}, pts:{k:'balance_points',d:-1} };
-const STR_KEYS=['vendor','category','name','tags','tx_date','frequency','spend_type','asset_kind','debt_kind','ownership','linked','kind','asset_link','debtlink','program','points_kind','expires_on','address','biz_model','paylink','txasset','cardlink','maincat'];
+let items=[], txs=[], debts=[], assets=[], points=[], accounts=[];
+let currentTab='dashboard', editId=null, editTxId=null, editDebtId=null, editAssetId=null, editPtsId=null, editAcctId=null, viewDebtId=null;
+let sorts = { exp:{k:'monthly',d:-1}, inc:{k:'monthly',d:-1}, asset:{k:'effective',d:-1}, tx:{k:'tx_date',d:-1}, debt:{k:'balance',d:-1}, pts:{k:'balance_points',d:-1}, acct:{k:'balance',d:-1} };
+const STR_KEYS=['vendor','category','name','tags','tx_date','frequency','spend_type','asset_kind','debt_kind','ownership','linked','kind','asset_link','debtlink','program','points_kind','expires_on','address','biz_model','paylink','txasset','cardlink','maincat','owner','bank','last4','account_type'];
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -470,7 +511,10 @@ const daily = it => monthly(it)*12/365.25;
 const annual = it => monthly(it)*12;
 const chips = o => (o.tags&&o.tags.length ? o.tags.map(t=>`<span class="badge b-tag">${esc(t)}</span>`).join(' ') : '');
 const parseTags = s => (s||'').split(',').map(x=>x.trim().toLowerCase().replace(/\s+/g,'-')).filter(Boolean);
-const hay = o => ((o.vendor||'')+' '+(o.name||'')+' '+(o.program||'')+' '+(o.description||'')+' '+(o.notes||'')+' '+(o.category||'')+' '+(o.address||'')+' '+((o.tags||[]).join(' '))+' '+(o.details?Object.entries(o.details).map(([k,v])=>k+' '+v).join(' '):'')).toLowerCase();
+const hay = o => ((o.vendor||'')+' '+(o.name||'')+' '+(o.program||'')+' '+(o.description||'')+' '+(o.notes||'')+' '+(o.category||'')+' '+(o.address||'')+' '+(o.bank||'')+' '+(o.owner||'')+' '+((o.tags||[]).join(' '))+' '+(o.details?Object.entries(o.details).map(([k,v])=>k+' '+v).join(' '):'')).toLowerCase();
+const OWNER_LBL={michael:'Michael', loren:'Loren', joint:'Joint'};
+const ownerBadge = o => { const v=o.owner||'joint'; const cls=v==='michael'?'b-mike':v==='loren'?'b-loren':'b-freq'; return `<span class="badge ${cls}">${OWNER_LBL[v]||v}</span>`; };
+const byOwner = (f) => o => !f || (o.owner||'joint')===f;
 const linkedIncome = a => a.linked_income_id ? items.find(i=>i.id===a.linked_income_id) : null;
 const assetMonthly = a => { const li=linkedIncome(a); return li && li.frequency!=='one-time' ? monthly(li) : 0; };
 const assetOfIncome = i => assets.find(a=>a.linked_income_id===i.id);
@@ -483,6 +527,7 @@ const debtMonthlyPay = d => { const e=payExpOf(d); return e ? monthly(e) : (+d.m
 const ptsOfCard = d => points.filter(p=>p.linked_debt_id===d.id);
 const cardPts = d => ptsOfCard(d).reduce((s,p)=>s+(+p.balance_points||0),0);
 const cardPtsVal = d => ptsOfCard(d).reduce((s,p)=>s+ptsValue(p),0);
+const totalCash = () => accounts.reduce((s,a)=>s+(+a.balance||0),0);
 const detailsToText = obj => Object.entries(obj||{}).map(([k,v])=>k+': '+v).join('\n');
 function textToDetails(s){
   const o={};
@@ -576,6 +621,7 @@ function getVal(o,k){
   if(k==='ptsval') return ptsValue(o);
   if(k==='cardlink') return (cardOfPts(o)?.name||'').toLowerCase();
   if(k==='tags') return (o.tags||[]).join(', ').toLowerCase();
+  if(k==='owner') return (o.owner||'joint');
   if(['amount','due_day','balance','monthly_payment','valuation','purchase_price','est_value','balance_points','cents_per_point','years_operating'].includes(k)) return Number(o[k])||0;
   return (o[k]??'').toString().toLowerCase();
 }
@@ -583,16 +629,17 @@ const cmp = t => (a,b)=>{ const x=getVal(a,sorts[t].k), y=getVal(b,sorts[t].k); 
 
 // ---------- data ----------
 async function loadAll(){
-  const [a,b,c,d,e] = await Promise.all([
+  const [a,b,c,d,e,f] = await Promise.all([
     sb.from('budget_expenses').select('*'),
     sb.from('budget_transactions').select('*'),
     sb.from('budget_debts').select('*'),
     sb.from('budget_assets').select('*'),
-    sb.from('budget_points').select('*')
+    sb.from('budget_points').select('*'),
+    sb.from('budget_accounts').select('*')
   ]);
-  const err=a.error||b.error||c.error||d.error||e.error;
+  const err=a.error||b.error||c.error||d.error||e.error||f.error;
   if(err){ alert('Load error: '+err.message); return; }
-  items=a.data; txs=b.data; debts=c.data; assets=d.data; points=e.data;
+  items=a.data; txs=b.data; debts=c.data; assets=d.data; points=e.data; accounts=f.data;
   buildFilters(); renderAll();
 }
 
@@ -635,9 +682,10 @@ function renderDashboard(){
   const mPers=exp.filter(i=>i.spend_type==='personal').reduce((s,i)=>s+monthly(i),0);
   const mBiz=exp.filter(i=>i.spend_type!=='personal').reduce((s,i)=>s+monthly(i),0);
   const totalDebt=debts.reduce((s,d)=>s+(Number(d.balance)||0),0);
-  const totalAssets=assets.filter(a=>a.active!==false).reduce((s,a)=>s+assetEffective(a),0);
-  const netWorth=totalAssets-totalDebt;
   const ptsVal=points.reduce((s,p)=>s+ptsValue(p),0);
+  const cash=totalCash();
+  const totalAssets=assets.filter(a=>a.active!==false).reduce((s,a)=>s+assetEffective(a),0)+cash+ptsVal;
+  const netWorth=totalAssets-totalDebt;
   const net=mInc-mExp;
   $('dashCards').innerHTML = `
     <div class="card"><div class="lbl">Monthly Expenses</div><div class="val neg">${fmt(mExp)}</div><div class="hint">${exp.length} recurring items</div></div>
@@ -645,7 +693,8 @@ function renderDashboard(){
     <div class="card"><div class="lbl">Net Monthly</div><div class="val ${net>=0?'pos':'neg'}">${fmt(net)}</div><div class="hint">income &minus; expenses</div></div>
     <div class="card"><div class="lbl">Personal / mo</div><div class="val">${fmt(mPers)}</div></div>
     <div class="card"><div class="lbl">Business / mo</div><div class="val">${fmt(mBiz)}</div></div>
-    <div class="card"><div class="lbl">Total Assets</div><div class="val pos">${fmt(totalAssets)}</div><div class="hint">${assets.length} assets (est+owner)</div></div>
+    <div class="card"><div class="lbl">Cash in Banks</div><div class="val pos">${fmt(cash)}</div><div class="hint">${accounts.length} accounts</div></div>
+    <div class="card"><div class="lbl">Total Assets</div><div class="val pos">${fmt(totalAssets)}</div><div class="hint">incl. cash + points</div></div>
     <div class="card"><div class="lbl">Total Debt &amp; IOUs</div><div class="val neg">${fmt(totalDebt)}</div><div class="hint">${debts.length} entries</div></div>
     <div class="card"><div class="lbl">Net Worth</div><div class="val ${netWorth>=0?'pos':'neg'}">${fmt(netWorth)}</div><div class="hint">assets &minus; debts</div></div>
     <div class="card"><div class="lbl">Reward Points Value</div><div class="val">${fmt(ptsVal)}</div><div class="hint">${fmtP(points.reduce((s,p)=>s+(+p.balance_points||0),0))} points</div></div>`;
@@ -663,7 +712,7 @@ function renderDashboard(){
 
 // ---------- P&L ----------
 function renderPL(){
-  const src=$('plSource').value, f=Number($('plPeriod').value), scope=$('plScope').value;
+  const src=$('plSource').value, f=Number($('plPeriod').value), scope=$('plScope').value, own=$('plOwner').value;
   $('plRangeWrap').style.display = src==='actuals'?'inline':'none';
   $('plPeriod').style.display = src==='budget'?'inline-block':'none';
   const perLbl={1:'Monthly',3:'Quarterly',12:'Annual'}[f];
@@ -671,7 +720,7 @@ function renderPL(){
   const add=(tree,parent,sub,name,amt)=>{ (tree[parent]=tree[parent]||{}); (tree[parent][sub]=tree[parent][sub]||[]).push([name,amt]); };
   if(src==='budget'){
     lbl=perLbl+' (run-rate)';
-    items.filter(i=>i.active!==false && i.frequency!=='one-time' && (!scope||i.spend_type===scope)).forEach(i=>{
+    items.filter(i=>i.active!==false && i.frequency!=='one-time' && (!scope||i.spend_type===scope)).filter(byOwner(own)).forEach(i=>{
       const amt=monthly(i)*f; if(!amt) return;
       const tree = i.kind==='income'?incTree:expTree;
       add(tree, parentOf(i.category,i.kind), i.category, i.vendor, amt);
@@ -679,7 +728,7 @@ function renderPL(){
   } else {
     const from=$('plFrom').value, to=$('plTo').value;
     lbl='Actuals '+(from||'start')+' &rarr; '+(to||'today');
-    txs.filter(t=>(!from||t.tx_date>=from)&&(!to||t.tx_date<=to)&&(!scope||t.spend_type===scope)).forEach(t=>{
+    txs.filter(t=>(!from||t.tx_date>=from)&&(!to||t.tx_date<=to)&&(!scope||t.spend_type===scope)).filter(byOwner(own)).forEach(t=>{
       const tree = t.kind==='income'?incTree:expTree;
       add(tree, parentOf(t.category,t.kind), t.category, t.vendor+' ('+t.tx_date+')', +t.amount||0);
     });
@@ -693,7 +742,7 @@ function renderPL(){
     <div class="card"><div class="lbl">Total Expenses</div><div class="val neg">${fmt(te)}</div></div>
     <div class="card"><div class="lbl">Net Profit / (Loss)</div><div class="val ${net>=0?'pos':'neg'}">${fmt(net)}</div></div>
     <div class="card"><div class="lbl">Margin</div><div class="val">${ti?Math.round(net/ti*100)+'%':'—'}</div></div>`;
-  $('plTable').querySelector('thead').innerHTML=`<tr><th>Profit &amp; Loss — ${scope||'combined'} — ${lbl}</th><th class="num">Amount</th></tr>`;
+  $('plTable').querySelector('thead').innerHTML=`<tr><th>Profit &amp; Loss — ${own?OWNER_LBL[own]:'everyone'} — ${scope||'combined'} — ${lbl}</th><th class="num">Amount</th></tr>`;
   const section=(title,tree)=>{
     let html=`<tr class="pl-head"><td colspan="2">${title}</td></tr>`;
     Object.entries(tree).sort((a,b)=>parSum(b[1])-parSum(a[1])).forEach(([parent,subs])=>{
@@ -719,8 +768,9 @@ function renderBS(){
   const bizAssets=as.filter(a=>a.asset_kind==='business');
   const othAssets=as.filter(a=>!['real_estate','vehicle','business'].includes(a.asset_kind));
   const ptsVal=points.reduce((s,p)=>s+ptsValue(p),0);
+  const cash=totalCash();
   const sumA=arr=>arr.reduce((s,a)=>s+assetEffective(a),0);
-  const totalAssets=sumA(as)+ptsVal;
+  const totalAssets=sumA(as)+ptsVal+cash;
   const cc=debts.filter(d=>d.debt_kind==='credit_card');
   const loans=debts.filter(d=>d.debt_kind==='loan');
   const ious=debts.filter(d=>d.debt_kind==='iou');
@@ -730,17 +780,18 @@ function renderBS(){
   const today=new Date().toISOString().slice(0,10);
   $('bsCards').innerHTML=`
     <div class="card"><div class="lbl">Total Assets</div><div class="val pos">${fmt(totalAssets)}</div></div>
+    <div class="card"><div class="lbl">Cash</div><div class="val">${fmt(cash)}</div></div>
     <div class="card"><div class="lbl">Total Liabilities</div><div class="val neg">${fmt(totalLiab)}</div></div>
     <div class="card"><div class="lbl">Owner's Equity (Net Worth)</div><div class="val ${equity>=0?'pos':'neg'}">${fmt(equity)}</div></div>
     <div class="card"><div class="lbl">Debt-to-Asset</div><div class="val">${totalAssets?Math.round(totalLiab/totalAssets*100)+'%':'—'}</div></div>`;
   $('bsTable').querySelector('thead').innerHTML=`<tr><th>Balance Sheet — as of ${today}</th><th class="num">Amount</th></tr>`;
-  const line=(cls,label,amt,note)=>`<tr class="${cls}"><td>${label}${note?` <span class="muted">${note}</span>`:''}</td><td class="num">${amt===null?'':fmt(amt)}</td></tr>`;
+  const line=(cls,label,amt)=>`<tr class="${cls}"><td>${label}</td><td class="num">${amt===null?'':fmt(amt)}</td></tr>`;
   const assetLines=(title,arr)=>{
     if(!arr.length) return '';
     let h=line('pl-sub',esc(title),arr.reduce((s,a)=>s+assetEffective(a),0));
     arr.sort((a,b)=>assetEffective(b)-assetEffective(a)).forEach(a=>{
       const tbd=assetEffective(a)===0;
-      h+=`<tr class="pl-item"><td>${esc(a.name)}${(+a.valuation||0)?'':' <span class="badge b-freq" style="font-size:9px;">est.</span>'}${tbd?' <span class="badge b-tbd" style="font-size:9px;">TBD</span>':''}</td><td class="num muted">${fmt(assetEffective(a))}</td></tr>`;
+      h+=`<tr class="pl-item"><td>${esc(a.name)} ${ownerBadge(a)}${(+a.valuation||0)?'':' <span class="badge b-freq" style="font-size:9px;">est.</span>'}${tbd?' <span class="badge b-tbd" style="font-size:9px;">TBD</span>':''}</td><td class="num muted">${fmt(assetEffective(a))}</td></tr>`;
     });
     return h;
   };
@@ -748,24 +799,27 @@ function renderBS(){
     if(!arr.length) return '';
     let h=line('pl-sub',esc(title),sumD(arr));
     arr.sort((a,b)=>(+b.balance||0)-(+a.balance||0)).forEach(d=>{
-      h+=`<tr class="pl-item"><td>${esc(d.name)}${(+d.balance||0)===0?' <span class="badge b-tbd" style="font-size:9px;">TBD</span>':''}</td><td class="num muted">${fmt(+d.balance)}</td></tr>`;
+      h+=`<tr class="pl-item"><td>${esc(d.name)} ${ownerBadge(d)}${(+d.balance||0)===0?' <span class="badge b-tbd" style="font-size:9px;">TBD</span>':''}</td><td class="num muted">${fmt(+d.balance)}</td></tr>`;
     });
     return h;
   };
   let body='';
   body+=`<tr class="pl-head"><td colspan="2">Assets</td></tr>`;
-  body+=line('pl-cat','Current Assets',ptsVal);
-  body+=`<tr class="pl-item"><td>Reward Points (est. redemption value)</td><td class="num muted">${fmt(ptsVal)}</td></tr>`;
-  body+=`<tr class="pl-item"><td class="muted">Cash &amp; bank accounts — not tracked yet</td><td class="num muted"></td></tr>`;
+  body+=line('pl-cat','Current Assets',cash+ptsVal);
+  body+=line('pl-sub','Cash &amp; Bank Accounts',cash);
+  [...accounts].sort((a,b)=>(+b.balance||0)-(+a.balance||0)).forEach(a=>{
+    body+=`<tr class="pl-item"><td>${esc(a.name)} (...${esc(a.last4)}) ${ownerBadge(a)}</td><td class="num muted">${fmt2(+a.balance)}</td></tr>`;
+  });
+  body+=line('pl-sub','Reward Points (est. redemption value)',ptsVal);
   body+=line('pl-cat','Fixed Assets',sumA(reAssets)+sumA(vehAssets));
   body+=assetLines('Real Estate',reAssets);
   body+=assetLines('Vehicles',vehAssets);
-  body+=line('pl-cat','Other Assets (Businesses & Investments)',sumA(bizAssets)+sumA(othAssets));
+  body+=line('pl-cat','Other Assets (Businesses &amp; Investments)',sumA(bizAssets)+sumA(othAssets));
   body+=assetLines('Businesses',bizAssets);
   body+=assetLines('Other',othAssets);
   body+=`<tr class="pl-total"><td>Total Assets</td><td class="num" style="color:var(--green)">${fmt(totalAssets)}</td></tr>`;
   body+=`<tr class="pl-head"><td colspan="2">Liabilities</td></tr>`;
-  body+=line('pl-cat','Current Liabilities',sumD(cc));
+  body+=line('pl-cat','Current Liabilities (Credit Cards)',sumD(cc));
   body+=debtLines('Credit Cards',cc);
   body+=line('pl-cat','Long-Term Liabilities',sumD(loans)+sumD(ious));
   body+=debtLines('Loans & Mortgages',loans);
@@ -775,14 +829,54 @@ function renderBS(){
   body+=`<tr class="pl-cat"><td>Owner's Equity (Net Worth)</td><td class="num" style="color:${equity>=0?'var(--green)':'var(--red)'}">${fmt(equity)}</td></tr>`;
   body+=`<tr class="pl-total"><td>Total Liabilities &amp; Equity</td><td class="num">${fmt(totalLiab+equity)}</td></tr>`;
   $('bsTable').querySelector('tbody').innerHTML=body;
+  // accounts management table
+  let list=[...accounts]; list.sort(cmp('acct'));
+  $('acctTable').querySelector('thead').innerHTML='<tr>'+
+    TH('acct','name','Account')+TH('acct','bank','Bank')+TH('acct','last4','Last 4')+TH('acct','account_type','Type')+TH('acct','owner','Whose')+
+    TH('acct','balance','Balance',1)+'<th>Notes</th><th></th></tr>';
+  $('acctTable').querySelector('tbody').innerHTML=list.map(a=>`
+    <tr><td><b>${esc(a.name)}</b></td><td>${esc(a.bank||'')}</td><td>...${esc(a.last4||'')}</td>
+    <td><span class="badge b-freq">${esc(a.account_type)}</span></td>
+    <td>${ownerBadge(a)}</td>
+    <td class="num"><b>${fmt2(+a.balance)}</b></td>
+    <td class="muted">${esc(a.notes||'')}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openAcctModal('${a.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delAcct('${a.id}')">&times;</button></td></tr>`).join('')
+    || `<tr><td colspan="8" class="muted">No bank accounts yet</td></tr>`;
+  $('acctTable').querySelector('tfoot').innerHTML=`<tr><td colspan="5">Total Cash</td><td class="num">${fmt2(cash)}</td><td colspan="2"></td></tr>`;
+}
+function openAcctModal(id){
+  editAcctId=id||null;
+  $('acctModalTitle').textContent=id?'Edit Bank Account':'Add Bank Account';
+  const a=id?accounts.find(x=>x.id===id):null;
+  $('ac_name').value=a?.name||''; $('ac_bank').value=a?.bank||''; $('ac_last4').value=a?.last4||'';
+  $('ac_type').value=a?.account_type||'checking'; $('ac_balance').value=a?Number(a.balance):'';
+  $('ac_owner').value=a?.owner||'joint'; $('ac_notes').value=a?.notes||'';
+  $('acctModal').classList.add('show');
+}
+async function saveAcct(){
+  const rec={ name:$('ac_name').value.trim(), bank:$('ac_bank').value.trim(), last4:$('ac_last4').value.trim(),
+    account_type:$('ac_type').value, balance:Number($('ac_balance').value)||0, owner:$('ac_owner').value,
+    notes:$('ac_notes').value.trim(), updated_at:new Date().toISOString() };
+  if(!rec.name){alert('Name is required');return;}
+  const r = editAcctId ? await sb.from('budget_accounts').update(rec).eq('id',editAcctId)
+                       : await sb.from('budget_accounts').insert(rec);
+  if(r.error){alert(r.error.message);return;}
+  closeModal('acctModal'); loadAll();
+}
+async function delAcct(id){
+  if(!confirm('Delete this bank account?'))return;
+  const r=await sb.from('budget_accounts').delete().eq('id',id);
+  if(r.error){alert(r.error.message);return;}
+  loadAll();
 }
 
 // ---------- expenses ----------
 function renderExpenses(){
-  const q=$('expSearch').value.toLowerCase(), ty=$('expType').value, mainCat=$('expMain').value, cat=$('expCat').value, fr=$('expFreq').value, tag=$('expTag').value, showInact=$('expInactive').checked;
+  const q=$('expSearch').value.toLowerCase(), ty=$('expType').value, mainCat=$('expMain').value, cat=$('expCat').value, fr=$('expFreq').value, tag=$('expTag').value, own=$('expOwner').value, showInact=$('expInactive').checked;
   let exp=items.filter(i=>i.kind!=='income')
     .filter(i=>showInact||i.active!==false)
     .filter(i=>!ty||i.spend_type===ty)
+    .filter(byOwner(own))
     .filter(i=>!mainCat||parentOf(i.category,i.kind)===mainCat)
     .filter(i=>!cat||i.category===cat).filter(i=>!fr||i.frequency===fr)
     .filter(i=>!tag||(i.tags||[]).includes(tag))
@@ -800,34 +894,36 @@ function renderExpenses(){
     <div class="card"><div class="lbl">Annual</div><div class="val neg">${fmt(mTot*12)}</div></div>
     <div class="card"><div class="lbl">One-Time (listed)</div><div class="val">${fmt(oneT)}</div><div class="hint">${tbd} items still $0/TBD</div></div>`;
   $('itemsTable').querySelector('thead').innerHTML='<tr>'+
-    TH('exp','vendor','Vendor')+TH('exp','maincat','Main Category')+TH('exp','category','Subcategory')+TH('exp','spend_type','Type')+TH('exp','debtlink','Debt')+TH('exp','tags','Tags')+
+    TH('exp','vendor','Vendor')+TH('exp','owner','Whose')+TH('exp','maincat','Main Category')+TH('exp','category','Subcategory')+TH('exp','spend_type','Type')+TH('exp','debtlink','Debt')+TH('exp','tags','Tags')+
     TH('exp','amount','Amount',1)+TH('exp','frequency','Frequency')+TH('exp','monthly','Monthly Avg',1)+TH('exp','annual','Annual',1)+
     TH('exp','due_day','Due',1)+'<th>Notes</th><th></th></tr>';
   $('itemsTable').querySelector('tbody').innerHTML = exp.map(i=>{
     const tbdI=(+i.amount||0)===0; const dl=debtOf(i);
     return `<tr style="${i.active===false?'opacity:.45':''}">
     <td><b>${esc(i.vendor)}</b><div class="muted">${esc(i.description||'')}</div></td>
+    <td>${ownerBadge(i)}</td>
     <td class="muted">${esc(parentOf(i.category,i.kind))}</td>
     <td>${esc(i.category||'')}</td>
     <td><span class="badge b-${i.spend_type==='personal'?'personal':'business'}">${i.spend_type}</span></td>
     <td>${dl?`<a href="#" onclick="openDebtView('${dl.id}');return false;" style="text-decoration:none;"><span class="badge b-debt" title="Click for full debt record">${esc(dl.name)}: ${fmt(+dl.balance)}</span></a>`:''}</td>
-    <td style="max-width:120px;">${chips(i)}</td>
+    <td style="max-width:110px;">${chips(i)}</td>
     <td class="num">${tbdI?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
     <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
     <td class="num"><b>${i.frequency==='one-time'?'&mdash;':fmt(monthly(i))}</b></td>
     <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(annual(i))}</td>
     <td class="num">${i.due_day?('Day '+i.due_day):''}</td>
-    <td class="muted" style="max-width:140px;">${esc(i.notes||'')}</td>
+    <td class="muted" style="max-width:130px;">${esc(i.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td></tr>`;
-  }).join('') || `<tr><td colspan="13" class="muted">No matching items</td></tr>`;
-  $('itemsTable').querySelector('tfoot').innerHTML = `<tr><td colspan="8">Total (${rec.length} recurring shown)</td><td class="num">${fmt(mTot)}</td><td class="num">${fmt(mTot*12)}</td><td colspan="3"></td></tr>`;
+  }).join('') || `<tr><td colspan="14" class="muted">No matching items</td></tr>`;
+  $('itemsTable').querySelector('tfoot').innerHTML = `<tr><td colspan="9">Total (${rec.length} recurring shown)</td><td class="num">${fmt(mTot)}</td><td class="num">${fmt(mTot*12)}</td><td colspan="3"></td></tr>`;
 }
 
 // ---------- income ----------
 function renderIncome(){
-  const iq=$('incSearch').value.toLowerCase(), icat=$('incCat').value, itag=$('incTag').value, iInact=$('incInactive').checked;
+  const iq=$('incSearch').value.toLowerCase(), icat=$('incCat').value, itag=$('incTag').value, iown=$('incOwner').value, iInact=$('incInactive').checked;
   let inc=items.filter(i=>i.kind==='income')
     .filter(i=>iInact||i.active!==false)
+    .filter(byOwner(iown))
     .filter(i=>!icat||i.category===icat)
     .filter(i=>!itag||(i.tags||[]).includes(itag))
     .filter(i=>!iq||hay(i).includes(iq));
@@ -842,34 +938,36 @@ function renderIncome(){
     <div class="card"><div class="lbl">ARR</div><div class="val pos">${fmt(mrr*12)}</div></div>
     <div class="card"><div class="lbl">Streams</div><div class="val">${irec.length}</div><div class="hint">${inc.filter(i=>(+i.amount||0)===0).length} still $0/TBD</div></div>`;
   $('incomeTable').querySelector('thead').innerHTML='<tr>'+
-    TH('inc','vendor','Stream')+TH('inc','maincat','Main Category')+TH('inc','category','Subcategory')+TH('inc','asset_link','Asset')+TH('inc','tags','Tags')+
+    TH('inc','vendor','Stream')+TH('inc','owner','Whose')+TH('inc','maincat','Main Category')+TH('inc','category','Subcategory')+TH('inc','asset_link','Asset')+TH('inc','tags','Tags')+
     TH('inc','amount','Amount',1)+TH('inc','frequency','Frequency')+TH('inc','daily','DRR',1)+TH('inc','monthly','MRR',1)+TH('inc','annual','ARR',1)+
     '<th>Notes</th><th></th></tr>';
   $('incomeTable').querySelector('tbody').innerHTML = inc.map(i=>{
     const tbdI=(+i.amount||0)===0; const ast=assetOfIncome(i);
     return `<tr style="${i.active===false?'opacity:.45':''}">
     <td><b>${esc(i.vendor)}</b><div class="muted">${esc(i.description||'')}</div></td>
+    <td>${ownerBadge(i)}</td>
     <td class="muted">${esc(parentOf(i.category,'income'))}</td>
     <td>${esc(i.category||'')}</td>
     <td>${ast?`<span class="badge b-asset">${esc(ast.name)}</span>`:''}</td>
-    <td style="max-width:120px;">${chips(i)}</td>
+    <td style="max-width:110px;">${chips(i)}</td>
     <td class="num">${tbdI?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
     <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
     <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(daily(i))}</td>
     <td class="num"><b>${i.frequency==='one-time'?'&mdash;':fmt(monthly(i))}</b></td>
     <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(annual(i))}</td>
-    <td class="muted" style="max-width:140px;">${esc(i.notes||'')}</td>
+    <td class="muted" style="max-width:130px;">${esc(i.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td></tr>`;
-  }).join('') || `<tr><td colspan="12" class="muted">No income streams</td></tr>`;
-  $('incomeTable').querySelector('tfoot').innerHTML = `<tr><td colspan="7">Total</td><td class="num">${fmt(mrr*12/365.25)}</td><td class="num">${fmt(mrr)}</td><td class="num">${fmt(mrr*12)}</td><td colspan="2"></td></tr>`;
+  }).join('') || `<tr><td colspan="13" class="muted">No income streams</td></tr>`;
+  $('incomeTable').querySelector('tfoot').innerHTML = `<tr><td colspan="8">Total</td><td class="num">${fmt(mrr*12/365.25)}</td><td class="num">${fmt(mrr)}</td><td class="num">${fmt(mrr*12)}</td><td colspan="2"></td></tr>`;
 }
 
 // ---------- assets ----------
 function renderAssets(){
   reasonCache={};
-  const q=$('assetSearch').value.toLowerCase(), kind=$('assetKind').value, tag=$('assetTag').value;
+  const q=$('assetSearch').value.toLowerCase(), kind=$('assetKind').value, tag=$('assetTag').value, own=$('assetOwner').value;
   let list=assets.filter(a=>a.active!==false)
     .filter(a=>!kind||a.asset_kind===kind)
+    .filter(byOwner(own))
     .filter(a=>!tag||(a.tags||[]).includes(tag))
     .filter(a=>!q||(hay(a)+' '+(a.ownership||'').toLowerCase()+' '+(linkedIncome(a)?.vendor||'').toLowerCase()).includes(q));
   list.sort(cmp('asset'));
@@ -878,7 +976,7 @@ function renderAssets(){
   const biz=list.filter(a=>a.asset_kind==='business').reduce((s,a)=>s+assetEffective(a),0);
   const mFromAssets=list.reduce((s,a)=>s+assetMonthly(a),0);
   const capexTot=list.reduce((s,a)=>s+capexOf(a),0);
-  const allEff=assets.filter(a=>a.active!==false).reduce((s,a)=>s+assetEffective(a),0);
+  const allEff=assets.filter(a=>a.active!==false).reduce((s,a)=>s+assetEffective(a),0)+totalCash()+points.reduce((s,p)=>s+ptsValue(p),0);
   const totalDebt=debts.reduce((s,d)=>s+(+d.balance||0),0);
   $('assetCards').innerHTML=`
     <div class="card"><div class="lbl">Total Asset Value (shown)</div><div class="val pos">${fmt(totEff)}</div><div class="hint">owner value, else estimate</div></div>
@@ -886,9 +984,9 @@ function renderAssets(){
     <div class="card"><div class="lbl">Businesses</div><div class="val">${fmt(biz)}</div></div>
     <div class="card"><div class="lbl">CapEx Invested</div><div class="val">${fmt(capexTot)}</div><div class="hint">logged in Actuals</div></div>
     <div class="card"><div class="lbl">Income From Assets / mo</div><div class="val pos">${fmt(mFromAssets)}</div><div class="hint">${fmt(mFromAssets*12)} / yr</div></div>
-    <div class="card"><div class="lbl">Net Worth</div><div class="val ${allEff-totalDebt>=0?'pos':'neg'}">${fmt(allEff-totalDebt)}</div><div class="hint">all assets &minus; all debts</div></div>`;
+    <div class="card"><div class="lbl">Net Worth</div><div class="val ${allEff-totalDebt>=0?'pos':'neg'}">${fmt(allEff-totalDebt)}</div><div class="hint">incl. cash &amp; points</div></div>`;
   $('assetTable').querySelector('thead').innerHTML='<tr>'+
-    TH('asset','name','Asset')+TH('asset','asset_kind','Kind')+TH('asset','ownership','Owner')+TH('asset','address','Address')+TH('asset','tags','Tags')+
+    TH('asset','name','Asset')+TH('asset','owner','Whose')+TH('asset','asset_kind','Kind')+TH('asset','address','Address')+TH('asset','tags','Tags')+
     TH('asset','capex','CapEx',1)+TH('asset','est','Est. Value (AI/auto)',1)+TH('asset','valuation','Owner Value',1)+TH('asset','effective','Used in NW',1)+
     TH('asset','linked','Linked Income')+TH('asset','income_m','Income / mo',1)+'<th>Notes</th><th></th></tr>';
   const kindLbl={real_estate:'Real Estate', business:'Business', vehicle:'Vehicle', other:'Other'};
@@ -897,20 +995,20 @@ function renderAssets(){
     reasonCache[a.id]=est.reasoning;
     const zill=a.address?` <a href="https://www.zillow.com/homes/${encodeURIComponent(a.address)}_rb/" target="_blank" style="font-size:11px;">Zillow&nearr;</a>`:'';
     return `<tr>
-    <td><b>${esc(a.name)}</b></td>
+    <td><b>${esc(a.name)}</b><div class="muted">${esc(a.ownership||'')}</div></td>
+    <td>${ownerBadge(a)}</td>
     <td><span class="badge b-freq">${kindLbl[a.asset_kind]||a.asset_kind}</span></td>
-    <td>${esc(a.ownership||'')}</td>
     <td class="muted" style="max-width:150px;">${esc(a.address||'')}${zill}</td>
-    <td style="max-width:120px;">${chips(a)}</td>
+    <td style="max-width:110px;">${chips(a)}</td>
     <td class="num">${cap?fmt(cap):''}</td>
     <td class="num">${est.val?`<a href="#" onclick="showReason('${a.id}');return false;" title="Click for reasoning"><b>${fmt(est.val)}</b> &#9432;</a>`:`<a href="#" onclick="showReason('${a.id}');return false;"><span class="badge b-tbd">TBD &#9432;</span></a>`}</td>
     <td class="num">${(+a.valuation||0)?`<b>${fmt(+a.valuation)}</b>`:'<span class="muted">—</span>'}</td>
     <td class="num"><b>${fmt(assetEffective(a))}</b></td>
     <td>${li?`<span class="badge b-income">${esc(li.vendor)}</span>`:'<span class="muted">none</span>'}</td>
     <td class="num">${m?fmt(m):''}</td>
-    <td class="muted" style="max-width:140px;">${esc(a.notes||'')}</td>
+    <td class="muted" style="max-width:130px;">${esc(a.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openAssetModal('${a.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delAsset('${a.id}')">&times;</button></td></tr>`;
-  }).join('') || `<tr><td colspan="13" class="muted">No assets yet</td></tr>`;
+  }).join('') || `<tr><td colspan="14" class="muted">No assets yet</td></tr>`;
   $('assetTable').querySelector('tfoot').innerHTML=`<tr><td colspan="5">Total</td><td class="num">${fmt(list.reduce((s,a)=>s+capexOf(a),0))}</td><td></td><td></td><td class="num">${fmt(totEff)}</td><td></td><td class="num">${fmt(mFromAssets)}</td><td colspan="2"></td></tr>`;
 }
 function assetKindUI(){
@@ -923,6 +1021,7 @@ function openAssetModal(id){
   $('assetModalTitle').textContent=id?'Edit Asset':'Add Asset';
   const a=id?assets.find(x=>x.id===id):null;
   $('a_name').value=a?.name||''; $('a_kind').value=a?.asset_kind||'real_estate';
+  $('a_owner_sel').value=a?.owner||'joint';
   $('a_ownership').value=a?.ownership||''; $('a_purchase').value=a?.purchase_price?Number(a.purchase_price):'';
   $('a_owner').value=a?.valuation?Number(a.valuation):''; $('a_method').value=a?.val_method||'auto';
   $('a_address').value=a?.address||''; $('a_model').value=a?.biz_model||'';
@@ -932,7 +1031,7 @@ function openAssetModal(id){
   $('assetModal').classList.add('show');
 }
 async function saveAsset(){
-  const rec={ name:$('a_name').value.trim(), asset_kind:$('a_kind').value,
+  const rec={ name:$('a_name').value.trim(), asset_kind:$('a_kind').value, owner:$('a_owner_sel').value,
     ownership:$('a_ownership').value.trim(), purchase_price:Number($('a_purchase').value)||0,
     valuation:Number($('a_owner').value)||0, val_method:$('a_method').value,
     address:$('a_address').value.trim(), biz_model:$('a_model').value,
@@ -962,6 +1061,7 @@ function openItemModal(id){
   $('f_vendor').value=i?.vendor||''; $('f_desc').value=i?.description||''; $('f_category').value=i?.category||'';
   $('f_kind').value=i?.kind|| (currentTab==='income'?'income':'expense');
   $('f_type').value=i?.spend_type|| (currentTab==='income'?'business':'personal');
+  $('f_owner').value=i?.owner||'joint';
   $('f_amount').value=i?Number(i.amount):''; $('f_freq').value=i?.frequency||'monthly';
   $('f_due').value=i?.due_day||''; $('f_active').value=String(i?.active!==false);
   $('f_debt').value=i?.linked_debt_id||'';
@@ -971,7 +1071,7 @@ function openItemModal(id){
 async function saveItem(){
   const rec={
     vendor:$('f_vendor').value.trim(), description:$('f_desc').value.trim(), category:$('f_category').value.trim()||'Other',
-    kind:$('f_kind').value, spend_type:$('f_type').value, amount:Number($('f_amount').value)||0,
+    kind:$('f_kind').value, spend_type:$('f_type').value, owner:$('f_owner').value, amount:Number($('f_amount').value)||0,
     frequency:$('f_freq').value, due_day:$('f_due').value?Number($('f_due').value):null,
     active:$('f_active').value==='true', tags:parseTags($('f_tags').value), notes:$('f_notes').value.trim(), updated_at:new Date().toISOString()
   };
@@ -979,7 +1079,7 @@ async function saveItem(){
   let debtSel=$('f_debt').value;
   if(debtSel==='__new__'){
     const isCC=/credit|card/i.test(rec.vendor+' '+rec.category);
-    const nd={ name:rec.vendor, debt_kind:isCC?'credit_card':'loan', balance:0,
+    const nd={ name:rec.vendor, debt_kind:isCC?'credit_card':'loan', balance:0, owner:rec.owner,
       monthly_payment:rec.amount*(FREQ[rec.frequency]?.f??1)||null, tags:rec.tags, notes:'Auto-created in tandem with expense "'+rec.vendor+'" — set the balance owed' };
     const nr=await sb.from('budget_debts').insert(nd).select().single();
     if(nr.error){alert(nr.error.message);return;}
@@ -1011,9 +1111,10 @@ function txPreset(p){
   renderAll();
 }
 function renderTx(){
-  const from=$('txFrom').value, to=$('txTo').value, q=$('txSearch').value.toLowerCase(), kind=$('txKind').value, ty=$('txType').value, tag=$('txTag').value;
+  const from=$('txFrom').value, to=$('txTo').value, q=$('txSearch').value.toLowerCase(), kind=$('txKind').value, ty=$('txType').value, tag=$('txTag').value, own=$('txOwner').value;
   let list=txs.filter(t=>(!from||t.tx_date>=from)&&(!to||t.tx_date<=to))
     .filter(t=>!kind||t.kind===kind).filter(t=>!ty||t.spend_type===ty)
+    .filter(byOwner(own))
     .filter(t=>!tag||(t.tags||[]).includes(tag))
     .filter(t=>!q||hay(t).includes(q));
   list.sort(cmp('tx'));
@@ -1033,22 +1134,23 @@ function renderTx(){
     <div class="card"><div class="lbl">Avg Spend / Week</div><div class="val">${fmt(spent/days*7)}</div></div>
     <div class="card"><div class="lbl">Avg Spend / Month</div><div class="val">${fmt(spent/days*30.4375)}</div></div>`;
   $('txTable').querySelector('thead').innerHTML='<tr>'+
-    TH('tx','tx_date','Date')+TH('tx','vendor','Vendor / Source')+TH('tx','maincat','Main Category')+TH('tx','category','Subcategory')+TH('tx','spend_type','Type')+TH('tx','txasset','Asset (CapEx)')+TH('tx','tags','Tags')+
+    TH('tx','tx_date','Date')+TH('tx','vendor','Vendor / Source')+TH('tx','owner','Whose')+TH('tx','maincat','Main Category')+TH('tx','category','Subcategory')+TH('tx','spend_type','Type')+TH('tx','txasset','Asset (CapEx)')+TH('tx','tags','Tags')+
     TH('tx','amount','Amount',1)+'<th>Notes</th><th></th></tr>';
   $('txTable').querySelector('tbody').innerHTML=list.map(t=>{
     const ast=assets.find(a=>a.id===t.linked_asset_id);
     return `<tr><td class="num">${t.tx_date}</td>
     <td><b>${esc(t.vendor)}</b></td>
+    <td>${ownerBadge(t)}</td>
     <td class="muted">${esc(parentOf(t.category,t.kind))}</td>
     <td>${esc(t.category||'')}</td>
     <td><span class="badge b-${t.spend_type==='personal'?'personal':'business'}">${t.spend_type}</span>${t.kind==='income'?' <span class="badge b-income">income</span>':''}</td>
     <td>${ast?`<span class="badge b-asset">${esc(ast.name)}</span>`:''}</td>
-    <td style="max-width:120px;">${chips(t)}</td>
+    <td style="max-width:110px;">${chips(t)}</td>
     <td class="num" style="color:${t.kind==='income'?'var(--green)':'inherit'}">${t.kind==='income'?'+':''}${fmt2(+t.amount)}</td>
     <td class="muted">${esc(t.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openTxModal('${t.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delTx('${t.id}')">&times;</button></td></tr>`;
-  }).join('') || `<tr><td colspan="10" class="muted">No actuals logged in this range yet. Click "+ Log Actual" to start feeding real numbers.</td></tr>`;
-  $('txTable').querySelector('tfoot').innerHTML=`<tr><td colspan="7">Totals</td><td class="num">${fmt(earned-spent)}</td><td colspan="2"></td></tr>`;
+  }).join('') || `<tr><td colspan="11" class="muted">No actuals logged in this range yet. Click "+ Log Actual" to start feeding real numbers.</td></tr>`;
+  $('txTable').querySelector('tfoot').innerHTML=`<tr><td colspan="8">Totals</td><td class="num">${fmt(earned-spent)}</td><td colspan="2"></td></tr>`;
 }
 function openTxModal(id){
   editTxId=id||null;
@@ -1056,6 +1158,7 @@ function openTxModal(id){
   const t=id?txs.find(x=>x.id===id):null;
   $('t_date').value=t?.tx_date||new Date().toISOString().slice(0,10);
   $('t_vendor').value=t?.vendor||''; $('t_kind').value=t?.kind||'expense'; $('t_type').value=t?.spend_type||'personal';
+  $('t_owner').value=t?.owner||'joint';
   $('t_amount').value=t?Number(t.amount):''; $('t_category').value=t?.category||'';
   $('t_asset').value=t?.linked_asset_id||'';
   $('t_tags').value=(t?.tags||[]).join(', '); $('t_notes').value=t?.notes||'';
@@ -1063,11 +1166,11 @@ function openTxModal(id){
 }
 $('t_vendor')?.addEventListener('change',()=>{
   const m=items.find(i=>i.vendor===$('t_vendor').value);
-  if(m){ $('t_category').value=m.category||''; $('t_type').value=m.spend_type; $('t_kind').value=m.kind||'expense'; }
+  if(m){ $('t_category').value=m.category||''; $('t_type').value=m.spend_type; $('t_kind').value=m.kind||'expense'; $('t_owner').value=m.owner||'joint'; }
 });
 async function saveTx(){
   const rec={ tx_date:$('t_date').value, vendor:$('t_vendor').value.trim(), kind:$('t_kind').value,
-    spend_type:$('t_type').value, amount:Number($('t_amount').value)||0, category:$('t_category').value.trim()||'Other',
+    spend_type:$('t_type').value, owner:$('t_owner').value, amount:Number($('t_amount').value)||0, category:$('t_category').value.trim()||'Other',
     linked_asset_id:$('t_asset').value||null,
     tags:parseTags($('t_tags').value), notes:$('t_notes').value.trim() };
   if(!rec.vendor||!rec.tx_date||!rec.amount){alert('Date, vendor and amount are required');return;}
@@ -1085,9 +1188,10 @@ async function delTx(id){
 
 // ---------- debts ----------
 function renderDebts(){
-  const q=$('debtSearch').value.toLowerCase(), kf=$('debtKindF').value, tag=$('debtTag').value;
+  const q=$('debtSearch').value.toLowerCase(), kf=$('debtKindF').value, tag=$('debtTag').value, own=$('debtOwner').value;
   let list=debts
     .filter(d=>!kf||d.debt_kind===kf)
+    .filter(byOwner(own))
     .filter(d=>!tag||(d.tags||[]).includes(tag))
     .filter(d=>!q||hay(d).includes(q));
   list.sort(cmp('debt'));
@@ -1099,13 +1203,13 @@ function renderDebts(){
   $('debtCards').innerHTML=`
     <div class="card"><div class="lbl">Total Owed (all)</div><div class="val neg">${fmt(total)}</div><div class="hint">${debts.length} entries</div></div>
     <div class="card"><div class="lbl">IOUs / Personal Loans</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='iou').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
-    <div class="card"><div class="lbl">Credit Cards</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='credit_card').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
+    <div class="card"><div class="lbl">Credit Cards</div><div class="val neg">${fmt(debts.filter(d=>d.debt_kind==='credit_card').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
     <div class="card"><div class="lbl">Loans / Mortgages</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='loan').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
     <div class="card"><div class="lbl">Monthly Debt Service</div><div class="val">${fmt(pay)}</div><div class="hint">from linked payment expenses</div></div>
     <div class="card"><div class="lbl">Points on Cards</div><div class="val">${fmtP(ccPts)}</div><div class="hint">&asymp; ${fmt(ccPtsVal)} &middot; from Points tab</div></div>`;
   const kindLbl={iou:'IOU / Personal Loan', credit_card:'Credit Card', loan:'Loan / Mortgage'};
   $('debtTable').querySelector('thead').innerHTML='<tr>'+
-    TH('debt','name','Name')+TH('debt','debt_kind','Kind')+TH('debt','tags','Tags')+
+    TH('debt','name','Name')+TH('debt','owner','Whose')+TH('debt','debt_kind','Kind')+TH('debt','tags','Tags')+
     TH('debt','balance','Balance Owed',1)+TH('debt','paymo','Monthly Payment',1)+TH('debt','cardpts','Points',1)+TH('debt','paylink','Linked Payment (Expenses tab)')+'<th>Notes</th><th></th></tr>';
   $('debtTable').querySelector('tbody').innerHTML=list.map(d=>{
     const pe=payExpOf(d);
@@ -1117,18 +1221,19 @@ function renderDebts(){
         ? `<a href="#" onclick="setTab('points');return false;" title="${progs.map(p=>esc(p.program)).join(', ')} — click to open Points tab" style="text-decoration:none;"><span class="badge b-pts"><b>${fmtP(cardPts(d))}</b> pts &asymp; ${fmt(cardPtsVal(d))}</span></a>`
         : `<a href="#" onclick="setTab('points');return false;" class="muted" title="Add a points program linked to this card">+ link points</a>`;
     }
-    const svc=(d.details||{})['Servicer']||'';
+    const svc=(d.details||{})['Servicer']||(d.details||{})['Bank']||'';
     return `<tr><td><a href="#" onclick="openDebtView('${d.id}');return false;" style="text-decoration:none;color:inherit;"><b>${esc(d.name)}</b>${nDetails?` <span class="badge b-freq" title="${nDetails} detail fields — click to view">&#128196; ${nDetails}</span>`:''}</a>${svc?`<div class="muted">${esc(svc)}</div>`:''}</td>
+    <td>${ownerBadge(d)}</td>
     <td><span class="badge b-freq">${kindLbl[d.debt_kind]||d.debt_kind}</span></td>
-    <td style="max-width:130px;">${chips(d)}</td>
+    <td style="max-width:110px;">${chips(d)}</td>
     <td class="num"><b>${(+d.balance||0)===0?'<span class="badge b-tbd">TBD</span>':fmt(+d.balance)}</b></td>
     <td class="num">${debtMonthlyPay(d)?fmt(debtMonthlyPay(d)):''}</td>
     <td class="num">${ptsCell}</td>
     <td>${pe?`<span class="badge b-debt">${esc(pe.vendor)} — ${fmt(monthly(pe))}/mo</span>`:'<span class="muted">none linked</span>'}</td>
     <td class="muted">${esc(d.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openDebtView('${d.id}')">View</button> <button class="btn btn-light btn-sm" onclick="openDebtModal('${d.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delDebt('${d.id}')">&times;</button></td></tr>`;
-  }).join('') || `<tr><td colspan="9" class="muted">No debts recorded</td></tr>`;
-  $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="3">Total (shown)</td><td class="num">${fmt(shown)}</td><td class="num">${fmt(pay)}</td><td class="num">${fmtP(list.reduce((s,d)=>s+cardPts(d),0))}</td><td colspan="3"></td></tr>`;
+  }).join('') || `<tr><td colspan="10" class="muted">No debts recorded</td></tr>`;
+  $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="4">Total (shown)</td><td class="num">${fmt(shown)}</td><td class="num">${fmt(pay)}</td><td class="num">${fmtP(list.reduce((s,d)=>s+cardPts(d),0))}</td><td colspan="3"></td></tr>`;
 }
 function openDebtView(id){
   const d=debts.find(x=>x.id===id); if(!d) return;
@@ -1137,6 +1242,7 @@ function openDebtView(id){
   $('dv_title').textContent=d.name;
   const pe=payExpOf(d); const progs=ptsOfCard(d);
   let rows='';
+  rows+=`<tr><td>Whose</td><td>${OWNER_LBL[d.owner||'joint']}</td></tr>`;
   rows+=`<tr><td>Kind</td><td>${kindLbl[d.debt_kind]||d.debt_kind}</td></tr>`;
   rows+=`<tr><td>Balance Owed</td><td><b>${(+d.balance||0)===0?'TBD':fmt(+d.balance)}</b></td></tr>`;
   rows+=`<tr><td>Monthly Payment</td><td>${debtMonthlyPay(d)?fmt(debtMonthlyPay(d)):'—'}</td></tr>`;
@@ -1154,6 +1260,7 @@ function openDebtModal(id){
   $('debtModalTitle').textContent=id?'Edit Debt / IOU':'Add Debt / IOU';
   const d=id?debts.find(x=>x.id===id):null;
   $('d_name').value=d?.name||''; $('d_kind').value=d?.debt_kind||'iou';
+  $('d_owner').value=d?.owner||'joint';
   $('d_balance').value=d?Number(d.balance):''; $('d_payment').value=d?.monthly_payment?Number(d.monthly_payment):'';
   $('d_details').value=detailsToText(d?.details);
   $('d_tags').value=(d?.tags||[]).join(', '); $('d_notes').value=d?.notes||'';
@@ -1162,7 +1269,7 @@ function openDebtModal(id){
   $('debtModal').classList.add('show');
 }
 async function saveDebt(){
-  const rec={ name:$('d_name').value.trim(), debt_kind:$('d_kind').value, balance:Number($('d_balance').value)||0,
+  const rec={ name:$('d_name').value.trim(), debt_kind:$('d_kind').value, owner:$('d_owner').value, balance:Number($('d_balance').value)||0,
     monthly_payment:$('d_payment').value?Number($('d_payment').value):null,
     details:textToDetails($('d_details').value),
     tags:parseTags($('d_tags').value), notes:$('d_notes').value.trim(), updated_at:new Date().toISOString() };
@@ -1177,7 +1284,7 @@ async function saveDebt(){
       const kindCat = rec.debt_kind==='credit_card' ? 'Credit Card Payments' : 'Mortgage Payments';
       const er=await sb.from('budget_expenses').insert({
         vendor:rec.name+' Payment', description:'Monthly payment on '+rec.name,
-        category:kindCat, spend_type:'personal', kind:'expense',
+        category:kindCat, spend_type:'personal', kind:'expense', owner:rec.owner,
         amount:rec.monthly_payment||0, frequency:'monthly',
         linked_debt_id:r.data.id, tags:rec.tags,
         notes:'Auto-created in tandem with debt "'+rec.name+'"' });
@@ -1195,8 +1302,8 @@ async function delDebt(id){
 
 // ---------- points ----------
 function renderPts(){
-  const q=$('ptsSearch').value.toLowerCase(), kf=$('ptsKindF').value;
-  let list=points.filter(p=>!kf||p.points_kind===kf).filter(p=>!q||hay(p).includes(q));
+  const q=$('ptsSearch').value.toLowerCase(), kf=$('ptsKindF').value, own=$('ptsOwner').value;
+  let list=points.filter(p=>!kf||p.points_kind===kf).filter(byOwner(own)).filter(p=>!q||hay(p).includes(q));
   list.sort(cmp('pts'));
   const totPts=points.reduce((s,p)=>s+(+p.balance_points||0),0);
   const totVal=points.reduce((s,p)=>s+ptsValue(p),0);
@@ -1209,37 +1316,39 @@ function renderPts(){
     <div class="card"><div class="lbl">Airline / Transferred</div><div class="val">${fmtP(points.filter(p=>p.points_kind!=='credit_card').reduce((s,p)=>s+(+p.balance_points||0),0))}</div></div>
     <div class="card"><div class="lbl">Expiring &le; 90 days</div><div class="val ${expSoon.length?'neg':''}">${expSoon.length}</div><div class="hint">${expSoon.map(p=>esc(p.program)).join(', ')||'none'}</div></div>`;
   $('ptsTable').querySelector('thead').innerHTML='<tr>'+
-    TH('pts','program','Program')+TH('pts','points_kind','Kind')+TH('pts','cardlink','Linked Card (Debts tab)')+TH('pts','tags','Tags')+
+    TH('pts','program','Program')+TH('pts','owner','Whose')+TH('pts','points_kind','Kind')+TH('pts','cardlink','Linked Card (Debts tab)')+TH('pts','tags','Tags')+
     TH('pts','balance_points','Points',1)+TH('pts','cents_per_point','&cent;/pt',1)+TH('pts','ptsval','Est. Value',1)+TH('pts','expires_on','Expires')+'<th>Notes</th><th></th></tr>';
   const kindLbl={credit_card:'Credit Card', airline:'Airline', hotel:'Hotel', other:'Other'};
   $('ptsTable').querySelector('tbody').innerHTML=list.map(p=>{
     const card=cardOfPts(p);
     const expiring=p.expires_on && new Date(p.expires_on)<=soon;
     return `<tr><td><b>${esc(p.program)}</b></td>
+    <td>${ownerBadge(p)}</td>
     <td><span class="badge b-freq">${kindLbl[p.points_kind]||p.points_kind}</span></td>
     <td>${card?`<a href="#" onclick="openDebtView('${card.id}');return false;" title="Click for card record" style="text-decoration:none;"><span class="badge b-debt">${esc(card.name)} (${fmt(+card.balance)})</span></a>`:''}</td>
-    <td style="max-width:120px;">${chips(p)}</td>
+    <td style="max-width:110px;">${chips(p)}</td>
     <td class="num"><b>${(+p.balance_points||0)===0?'<span class="badge b-tbd">TBD</span>':fmtP(+p.balance_points)}</b></td>
     <td class="num">${(+p.cents_per_point||0).toFixed(1)}&cent;</td>
     <td class="num">${fmt(ptsValue(p))}</td>
     <td>${p.expires_on?`<span class="badge ${expiring?'b-warn':'b-freq'}">${p.expires_on}</span>`:'<span class="muted">no expiry set</span>'}</td>
-    <td class="muted" style="max-width:160px;">${esc(p.notes||'')}</td>
+    <td class="muted" style="max-width:150px;">${esc(p.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openPtsModal('${p.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delPts('${p.id}')">&times;</button></td></tr>`;
-  }).join('') || `<tr><td colspan="10" class="muted">No points programs yet</td></tr>`;
-  $('ptsTable').querySelector('tfoot').innerHTML=`<tr><td colspan="4">Total</td><td class="num">${fmtP(totPts)}</td><td></td><td class="num">${fmt(totVal)}</td><td colspan="3"></td></tr>`;
+  }).join('') || `<tr><td colspan="11" class="muted">No points programs yet</td></tr>`;
+  $('ptsTable').querySelector('tfoot').innerHTML=`<tr><td colspan="5">Total</td><td class="num">${fmtP(totPts)}</td><td></td><td class="num">${fmt(totVal)}</td><td colspan="3"></td></tr>`;
 }
 function openPtsModal(id){
   editPtsId=id||null;
   $('ptsModalTitle').textContent=id?'Edit Points Program':'Add Points Program';
   const p=id?points.find(x=>x.id===id):null;
   $('p_program').value=p?.program||''; $('p_kind').value=p?.points_kind||'credit_card';
+  $('p_owner').value=p?.owner||'joint';
   $('p_balance').value=p?Number(p.balance_points):''; $('p_cpp').value=p?Number(p.cents_per_point):'1.0';
   $('p_card').value=p?.linked_debt_id||''; $('p_expires').value=p?.expires_on||'';
   $('p_tags').value=(p?.tags||[]).join(', '); $('p_notes').value=p?.notes||'';
   $('ptsModal').classList.add('show');
 }
 async function savePts(){
-  const rec={ program:$('p_program').value.trim(), points_kind:$('p_kind').value,
+  const rec={ program:$('p_program').value.trim(), points_kind:$('p_kind').value, owner:$('p_owner').value,
     balance_points:Number($('p_balance').value)||0, cents_per_point:Number($('p_cpp').value)||1,
     linked_debt_id:$('p_card').value||null, expires_on:$('p_expires').value||null,
     tags:parseTags($('p_tags').value), notes:$('p_notes').value.trim(), updated_at:new Date().toISOString() };
