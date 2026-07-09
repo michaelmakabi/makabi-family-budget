@@ -12,14 +12,14 @@
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif; font-size:14px;}
-  .wrap{max-width:1320px; margin:0 auto; padding:20px;}
+  .wrap{max-width:1360px; margin:0 auto; padding:20px;}
   header{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-bottom:16px; border-bottom:2px solid var(--border);}
   header h1{font-size:22px;}
   header .sub{color:var(--muted); font-size:13px;}
   .tabs{display:flex; gap:6px; margin:16px 0; flex-wrap:wrap;}
-  .tab{padding:9px 18px; border:1px solid var(--border); border-radius:8px; background:var(--panel); cursor:pointer; font-weight:600; color:var(--muted);}
+  .tab{padding:9px 16px; border:1px solid var(--border); border-radius:8px; background:var(--panel); cursor:pointer; font-weight:600; color:var(--muted);}
   .tab.active{background:var(--blue); color:#fff; border-color:var(--blue);}
-  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(170px,1fr)); gap:10px; margin-bottom:16px;}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:10px; margin-bottom:16px;}
   .card{background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px;}
   .card .lbl{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); margin-bottom:4px;}
   .card .val{font-size:19px; font-weight:700;}
@@ -49,12 +49,14 @@
   .b-tbd{background:#fef3c7; color:var(--amber);}
   .b-tag{background:#ccfbf1; color:var(--teal); margin:1px;}
   .b-asset{background:#fce7f3; color:#be185d;}
+  .b-debt{background:#fee2e2; color:var(--red);}
+  .b-warn{background:#fef3c7; color:var(--amber);}
   .muted{color:var(--muted); font-size:12px;}
   .tblwrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px;}
   tfoot td{font-weight:700; background:var(--panel);}
   .overlay{position:fixed; inset:0; background:rgba(15,23,42,.4); display:none; align-items:flex-start; justify-content:center; padding:40px 16px; z-index:50; overflow:auto;}
   .overlay.show{display:flex;}
-  .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:560px; box-shadow:0 20px 50px rgba(0,0,0,.2);}
+  .modal{background:#fff; border-radius:12px; padding:22px; width:100%; max-width:600px; box-shadow:0 20px 50px rgba(0,0,0,.2);}
   .modal h3{margin-bottom:14px;}
   .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
   .field{display:flex; flex-direction:column; gap:4px; margin-bottom:10px;}
@@ -66,6 +68,10 @@
   #gate input{font-size:16px; text-align:center; width:220px;}
   .section-title{font-size:16px; font-weight:700; margin:20px 0 8px;}
   .toolbar-right{margin-left:auto; display:flex; gap:8px;}
+  .pl-cat td{font-weight:700; background:#f8fafc;}
+  .pl-item td:first-child{padding-left:28px; color:var(--muted);}
+  .pl-total td{font-weight:800; border-top:2px solid var(--border); background:var(--panel);}
+  .subhead{font-size:13px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; margin:14px 0 6px;}
   @media(max-width:700px){ .grid2{grid-template-columns:1fr;} header h1{font-size:18px;} }
 </style>
 </head>
@@ -92,11 +98,13 @@
 
   <div class="tabs">
     <div class="tab active" data-tab="dashboard" onclick="setTab('dashboard')">Dashboard</div>
+    <div class="tab" data-tab="pl" onclick="setTab('pl')">P&amp;L</div>
     <div class="tab" data-tab="expenses" onclick="setTab('expenses')">Expenses</div>
     <div class="tab" data-tab="income" onclick="setTab('income')">Income</div>
     <div class="tab" data-tab="assets" onclick="setTab('assets')">Assets</div>
     <div class="tab" data-tab="actuals" onclick="setTab('actuals')">Actuals / Log</div>
     <div class="tab" data-tab="debts" onclick="setTab('debts')">Debts &amp; IOUs</div>
+    <div class="tab" data-tab="points" onclick="setTab('points')">Points</div>
   </div>
 
   <!-- DASHBOARD -->
@@ -112,6 +120,28 @@
       <thead><tr><th>Category</th><th>Type</th><th class="num">Monthly</th><th class="num">Annual</th><th class="num">% of Spend</th></tr></thead>
       <tbody></tbody>
     </table></div>
+  </div>
+
+  <!-- P&L -->
+  <div id="tab-pl" style="display:none;">
+    <div class="controls">
+      <select id="plSource" onchange="renderAll()">
+        <option value="budget">Source: Budget (run-rate)</option>
+        <option value="actuals">Source: Actuals (logged)</option>
+      </select>
+      <select id="plPeriod" onchange="renderAll()">
+        <option value="1">Monthly</option><option value="3">Quarterly</option><option value="12">Annual</option>
+      </select>
+      <select id="plScope" onchange="renderAll()">
+        <option value="">All (Personal + Business)</option>
+        <option value="business">Business only</option>
+        <option value="personal">Personal only</option>
+      </select>
+      <span class="muted" id="plRangeWrap" style="display:none;">From <input type="date" id="plFrom" onchange="renderAll()"> To <input type="date" id="plTo" onchange="renderAll()"></span>
+    </div>
+    <div class="cards" id="plCards"></div>
+    <div class="tblwrap"><table id="plTable"><thead></thead><tbody></tbody></table></div>
+    <p class="muted" style="margin-top:8px;">Budget mode projects from recurring items. Actuals mode builds the P&amp;L from what you log with dates. One-time items appear in Actuals mode.</p>
   </div>
 
   <!-- EXPENSES -->
@@ -146,7 +176,7 @@
   <div id="tab-assets" style="display:none;">
     <div class="cards" id="assetCards"></div>
     <div class="controls">
-      <input type="search" id="assetSearch" placeholder="Search assets / tags..." oninput="renderAll()">
+      <input type="search" id="assetSearch" placeholder="Search assets / address / tags..." oninput="renderAll()">
       <select id="assetKind" onchange="renderAll()">
         <option value="">All Kinds</option><option value="real_estate">Real Estate</option><option value="business">Business</option><option value="vehicle">Vehicle</option><option value="other">Other</option>
       </select>
@@ -154,7 +184,7 @@
       <div class="toolbar-right"><button class="btn btn-primary" onclick="openAssetModal()">+ Add Asset</button></div>
     </div>
     <div class="tblwrap"><table id="assetTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="muted" style="margin-top:8px;">Link an asset to an income stream and its production shows here and on the Income tab. Net worth = assets &minus; debts.</p>
+    <p class="muted" style="margin-top:8px;">Business estimates auto-recalculate from linked income (ARR/SDE multiples), growth, margin, years and logged CapEx — click the value to see the reasoning. Real estate: add the full address, then ask Claude in chat to research market value and it will fill the AI Estimate. Owner Value (your appraisal/opinion) overrides the estimate in Net Worth when set. Log CapEx in Actuals and link it to the asset.</p>
   </div>
 
   <!-- ACTUALS -->
@@ -177,7 +207,7 @@
       <select id="txTag" onchange="renderAll()"><option value="">All Tags</option></select>
     </div>
     <div class="tblwrap"><table id="txTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="muted" style="margin-top:8px;">Log real charges/deposits here with dates — including one-time income and one-time expenses. The date-range summary computes actual daily/weekly/monthly averages from what you log.</p>
+    <p class="muted" style="margin-top:8px;">Log real charges/deposits with dates — including one-time income/expenses and CapEx (link CapEx to its asset so it feeds the valuation).</p>
   </div>
 
   <!-- DEBTS -->
@@ -185,11 +215,24 @@
     <div class="cards" id="debtCards"></div>
     <div class="controls">
       <input type="search" id="debtSearch" placeholder="Search debts / tags..." oninput="renderAll()">
-      <select id="debtKindF" onchange="renderAll()"><option value="">All Kinds</option><option value="iou">IOU / Personal Loan</option><option value="credit_card">Credit Card</option><option value="loan">Loan</option></select>
+      <select id="debtKindF" onchange="renderAll()"><option value="">All Kinds</option><option value="iou">IOU / Personal Loan</option><option value="credit_card">Credit Card</option><option value="loan">Loan / Mortgage</option></select>
       <select id="debtTag" onchange="renderAll()"><option value="">All Tags</option></select>
       <div class="toolbar-right"><button class="btn btn-primary" onclick="openDebtModal()">+ Add Debt / IOU</button></div>
     </div>
     <div class="tblwrap"><table id="debtTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <p class="muted" style="margin-top:8px;">Debts correlate with expenses: a mortgage or credit-card payment on the Expenses tab links here, and the linked payment shows below. Adding a debt can auto-create its monthly payment expense in tandem.</p>
+  </div>
+
+  <!-- POINTS -->
+  <div id="tab-points" style="display:none;">
+    <div class="cards" id="ptsCards"></div>
+    <div class="controls">
+      <input type="search" id="ptsSearch" placeholder="Search programs / tags..." oninput="renderAll()">
+      <select id="ptsKindF" onchange="renderAll()"><option value="">All Kinds</option><option value="credit_card">Credit Card</option><option value="airline">Airline</option><option value="hotel">Hotel</option><option value="other">Other</option></select>
+      <div class="toolbar-right"><button class="btn btn-primary" onclick="openPtsModal()">+ Add Program</button></div>
+    </div>
+    <div class="tblwrap"><table id="ptsTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
+    <p class="muted" style="margin-top:8px;">Track card points and transferred balances (airlines, hotels). Est. value uses cents-per-point. Programs expiring within 90 days get flagged.</p>
   </div>
 </div>
 
@@ -207,6 +250,9 @@
       <div class="field"><label>Bill Due Day (1-31, optional)</label><input id="f_due" type="number" min="1" max="31"></div>
       <div class="field"><label>Active</label><select id="f_active"><option value="true">Yes</option><option value="false">No</option></select></div>
     </div>
+    <div class="field"><label>Linked Debt (mortgage / credit card / loan this payment services)</label>
+      <select id="f_debt"><option value="">None</option></select>
+    </div>
     <div class="field"><label>Tags (comma separated)</label><input id="f_tags" placeholder="e.g. ai-tools, tax-deductible"></div>
     <div class="field"><label>Description</label><input id="f_desc"></div>
     <div class="field"><label>Notes</label><textarea id="f_notes" rows="2"></textarea></div>
@@ -223,9 +269,26 @@
     <h3 id="assetModalTitle">Add Asset</h3>
     <div class="grid2">
       <div class="field"><label>Name *</label><input id="a_name"></div>
-      <div class="field"><label>Kind</label><select id="a_kind"><option value="real_estate">Real Estate</option><option value="business">Business</option><option value="vehicle">Vehicle</option><option value="other">Other</option></select></div>
-      <div class="field"><label>Valuation ($)</label><input id="a_valuation" type="number" step="0.01" min="0"></div>
+      <div class="field"><label>Kind</label><select id="a_kind" onchange="assetKindUI()"><option value="real_estate">Real Estate</option><option value="business">Business</option><option value="vehicle">Vehicle</option><option value="other">Other</option></select></div>
       <div class="field"><label>Ownership</label><input id="a_ownership" placeholder="Mike / Loren / Joint"></div>
+      <div class="field"><label>Purchase Price / Initial Investment ($)</label><input id="a_purchase" type="number" step="0.01" min="0"></div>
+      <div class="field"><label>Owner / Appraised Value ($) <span class="muted">(your opinion — overrides estimate)</span></label><input id="a_owner" type="number" step="0.01" min="0"></div>
+      <div class="field"><label>Valuation Method</label><select id="a_method"><option value="auto">Auto (AI/formula estimate)</option><option value="manual">Manual (owner value only)</option></select></div>
+    </div>
+    <div class="field" id="a_addr_wrap"><label>Full Address (real estate — used for market lookups)</label><input id="a_address" placeholder="123 Main St, City, FL 33xxx"></div>
+    <div id="a_biz_wrap">
+      <div class="subhead">Business valuation inputs</div>
+      <div class="grid2">
+        <div class="field"><label>Business Model</label><select id="a_model">
+          <option value="">—</option><option value="saas">SaaS / Software</option><option value="agency">Agency</option>
+          <option value="service">Service</option><option value="brokerage">Brokerage / Deal-based</option>
+          <option value="ecommerce">E-commerce</option><option value="other">Other</option></select></div>
+        <div class="field"><label>Years Operating</label><input id="a_years" type="number" step="0.5" min="0"></div>
+        <div class="field"><label>Est. Profit Margin %</label><input id="a_margin" type="number" min="0" max="100" placeholder="50"></div>
+        <div class="field"><label>Growth Trend</label><select id="a_growth">
+          <option value="declining">Declining</option><option value="flat" selected>Flat</option>
+          <option value="growing">Growing</option><option value="fast">Fast-growing</option></select></div>
+      </div>
     </div>
     <div class="field"><label>Linked Income Stream (optional)</label><select id="a_link"><option value="">None</option></select></div>
     <div class="field"><label>Tags (comma separated)</label><input id="a_tags" placeholder="e.g. rental, saas"></div>
@@ -249,7 +312,8 @@
       <div class="field"><label>Amount ($) *</label><input id="t_amount" type="number" step="0.01" min="0"></div>
       <div class="field"><label>Category</label><input id="t_category" list="catList"></div>
     </div>
-    <div class="field"><label>Tags (comma separated)</label><input id="t_tags" placeholder="e.g. one-time, api-overage"></div>
+    <div class="field"><label>Link to Asset (CapEx / asset-related — feeds valuation)</label><select id="t_asset"><option value="">None</option></select></div>
+    <div class="field"><label>Tags (comma separated)</label><input id="t_tags" placeholder="e.g. one-time, capex"></div>
     <div class="field"><label>Notes</label><input id="t_notes"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="closeModal('txModal')">Cancel</button>
@@ -264,16 +328,47 @@
     <h3 id="debtModalTitle">Add Debt / IOU</h3>
     <div class="grid2">
       <div class="field"><label>Name *</label><input id="d_name"></div>
-      <div class="field"><label>Kind</label><select id="d_kind"><option value="iou">IOU / Personal Loan</option><option value="credit_card">Credit Card</option><option value="loan">Loan</option></select></div>
+      <div class="field"><label>Kind</label><select id="d_kind"><option value="iou">IOU / Personal Loan</option><option value="credit_card">Credit Card</option><option value="loan">Loan / Mortgage</option></select></div>
       <div class="field"><label>Balance Owed ($)</label><input id="d_balance" type="number" step="0.01"></div>
       <div class="field"><label>Monthly Payment ($, optional)</label><input id="d_payment" type="number" step="0.01"></div>
     </div>
-    <div class="field"><label>Tags (comma separated)</label><input id="d_tags" placeholder="e.g. family, wedding"></div>
+    <div class="field" id="d_mkexp_wrap"><label class="muted" style="font-weight:400;"><input type="checkbox" id="d_mkexp"> Also create a matching monthly payment <b>expense</b> linked to this debt (in tandem)</label></div>
+    <div class="field"><label>Tags (comma separated)</label><input id="d_tags" placeholder="e.g. family, mortgage"></div>
     <div class="field"><label>Notes</label><input id="d_notes"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="closeModal('debtModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveDebt()">Save</button>
     </div>
+  </div>
+</div>
+
+<!-- POINTS MODAL -->
+<div class="overlay" id="ptsModal">
+  <div class="modal">
+    <h3 id="ptsModalTitle">Add Points Program</h3>
+    <div class="grid2">
+      <div class="field"><label>Program *</label><input id="p_program" placeholder="e.g. Amex Membership Rewards, Emirates Skywards"></div>
+      <div class="field"><label>Kind</label><select id="p_kind"><option value="credit_card">Credit Card</option><option value="airline">Airline</option><option value="hotel">Hotel</option><option value="other">Other</option></select></div>
+      <div class="field"><label>Points Balance</label><input id="p_balance" type="number" step="1" min="0"></div>
+      <div class="field"><label>Est. Value (¢ per point)</label><input id="p_cpp" type="number" step="0.1" min="0" placeholder="1.0"></div>
+      <div class="field"><label>Linked Credit Card (optional)</label><select id="p_card"><option value="">None</option></select></div>
+      <div class="field"><label>Expiration Date (optional)</label><input id="p_expires" type="date"></div>
+    </div>
+    <div class="field"><label>Tags (comma separated)</label><input id="p_tags" placeholder="e.g. travel"></div>
+    <div class="field"><label>Notes</label><input id="p_notes"></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="closeModal('ptsModal')">Cancel</button>
+      <button class="btn btn-primary" onclick="savePts()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- REASON MODAL -->
+<div class="overlay" id="reasonModal">
+  <div class="modal">
+    <h3>Valuation Reasoning</h3>
+    <p id="reasonText" style="line-height:1.6;"></p>
+    <div class="actions"><button class="btn btn-primary" onclick="closeModal('reasonModal')">Close</button></div>
   </div>
 </div>
 
@@ -295,26 +390,73 @@ const FREQ = {
   'one-time':{label:'One-Time', f:0}
 };
 
-let items=[], txs=[], debts=[], assets=[];
-let currentTab='dashboard', editId=null, editTxId=null, editDebtId=null, editAssetId=null;
-let sorts = { exp:{k:'monthly',d:-1}, inc:{k:'monthly',d:-1}, asset:{k:'valuation',d:-1}, tx:{k:'tx_date',d:-1}, debt:{k:'balance',d:-1} };
-const STR_KEYS=['vendor','category','name','tags','tx_date','frequency','spend_type','asset_kind','debt_kind','ownership','linked','kind'];
+let items=[], txs=[], debts=[], assets=[], points=[];
+let currentTab='dashboard', editId=null, editTxId=null, editDebtId=null, editAssetId=null, editPtsId=null;
+let sorts = { exp:{k:'monthly',d:-1}, inc:{k:'monthly',d:-1}, asset:{k:'effective',d:-1}, tx:{k:'tx_date',d:-1}, debt:{k:'balance',d:-1}, pts:{k:'balance_points',d:-1} };
+const STR_KEYS=['vendor','category','name','tags','tx_date','frequency','spend_type','asset_kind','debt_kind','ownership','linked','kind','asset_link','debtlink','program','points_kind','expires_on','address','biz_model','paylink','txasset'];
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
 const fmt = n => (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:0, maximumFractionDigits:0});
 const fmt2 = n => (n<0?'-':'') + '$' + Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2, maximumFractionDigits:2});
+const fmtP = n => Math.round(n).toLocaleString('en-US');
 const esc = s => (s||'').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const monthly = it => (Number(it.amount)||0) * (FREQ[it.frequency]?.f ?? 1);
 const daily = it => monthly(it)*12/365.25;
 const annual = it => monthly(it)*12;
 const chips = o => (o.tags&&o.tags.length ? o.tags.map(t=>`<span class="badge b-tag">${esc(t)}</span>`).join(' ') : '');
 const parseTags = s => (s||'').split(',').map(x=>x.trim().toLowerCase().replace(/\s+/g,'-')).filter(Boolean);
-const hay = o => ((o.vendor||'')+' '+(o.name||'')+' '+(o.description||'')+' '+(o.notes||'')+' '+(o.category||'')+' '+((o.tags||[]).join(' '))).toLowerCase();
+const hay = o => ((o.vendor||'')+' '+(o.name||'')+' '+(o.program||'')+' '+(o.description||'')+' '+(o.notes||'')+' '+(o.category||'')+' '+(o.address||'')+' '+((o.tags||[]).join(' '))).toLowerCase();
 const linkedIncome = a => a.linked_income_id ? items.find(i=>i.id===a.linked_income_id) : null;
 const assetMonthly = a => { const li=linkedIncome(a); return li && li.frequency!=='one-time' ? monthly(li) : 0; };
 const assetOfIncome = i => assets.find(a=>a.linked_income_id===i.id);
+const debtOf = e => e.linked_debt_id ? debts.find(d=>d.id===e.linked_debt_id) : null;
+const payExpOf = d => items.find(e=>e.linked_debt_id===d.id && e.kind!=='income');
+const capexOf = a => txs.filter(t=>t.linked_asset_id===a.id && t.kind!=='income').reduce((s,t)=>s+(+t.amount||0),0);
+const cardOfPts = p => p.linked_debt_id ? debts.find(d=>d.id===p.linked_debt_id) : null;
+const ptsValue = p => (+p.balance_points||0)*(+p.cents_per_point||0)/100;
+const debtMonthlyPay = d => { const e=payExpOf(d); return e ? monthly(e) : (+d.monthly_payment||0); };
 
+// ---------- valuation engine ----------
+function bizAutoVal(a){
+  const arr=assetMonthly(a)*12, capex=capexOf(a), pp=+a.purchase_price||0;
+  const invested=Math.max(capex+pp, capex, pp);
+  const growth=a.growth||'flat', yrs=Number(a.years_operating)||0;
+  const margin=(Number(a.profit_margin)||50)/100;
+  if(arr===0 && invested===0) return {val:0, reasoning:'No linked income and no CapEx/purchase logged yet. Link an income stream (MRR) or log CapEx in Actuals to generate an estimate.'};
+  if(arr===0) return {val:invested, reasoning:`Pre-revenue: valued at invested capital — CapEx ${fmt(capex)} + purchase/initial investment ${fmt(pp)}. Once the linked income stream has MRR, this switches to a revenue-multiple valuation automatically.`};
+  let val, why;
+  if(a.biz_model==='saas'){
+    let mult={declining:1.0, flat:2.5, growing:3.5, fast:4.5}[growth]||2.5;
+    if(yrs>=3) mult+=0.5;
+    if(arr<50000) mult=Math.min(mult,2.5);
+    val=arr*mult;
+    why=`SaaS ARR-multiple method: ARR ${fmt(arr)} × ${mult.toFixed(1)}x. Multiple reflects ${growth} growth${yrs?`, ${yrs} yrs operating`:''}${arr<50000?', capped at 2.5x for sub-$50k ARR':''} (small-SaaS market comps ~1-4.5x ARR).`;
+  } else {
+    const sde=arr*margin;
+    let mult={declining:1.5, flat:2.0, growing:2.5, fast:3.0}[growth]||2.0;
+    if(yrs>=5) mult+=0.5;
+    val=sde*mult;
+    why=`SDE-multiple method (${a.biz_model||'business'}): revenue ${fmt(arr)}/yr × ${Math.round(margin*100)}% est. margin = SDE ${fmt(sde)} × ${mult.toFixed(1)}x (${growth}${yrs?`, ${yrs} yrs`:''}; small-business comps ~1.5-3.5x SDE).`;
+  }
+  if(invested>val){ why+=` Floored at invested capital ${fmt(invested)} (CapEx ${fmt(capex)} + purchase ${fmt(pp)}).`; val=invested; }
+  else if(invested>0){ why+=` Invested capital to date: ${fmt(invested)}.`; }
+  why+=' Recalculates automatically when linked income, growth, margin, years or CapEx change.';
+  return {val:Math.round(val), reasoning:why};
+}
+function assetEst(a){
+  if(a.val_method==='manual') return {val:+a.valuation||0, reasoning:'Manual valuation — owner value only.'};
+  if(a.asset_kind==='business') return bizAutoVal(a);
+  const est=+a.est_value||0;
+  let r=a.est_reasoning||'';
+  if(!est) r='No AI market estimate yet. '+(a.address?'Ask Claude in chat to research this address and it will fill in the estimate.':'Add the full address, then ask Claude in chat to research market value.');
+  return {val:est, reasoning:r};
+}
+const assetEffective = a => { const ov=+a.valuation||0; return ov>0 ? ov : assetEst(a).val; };
+let reasonCache={};
+function showReason(id){ $('reasonText').textContent=reasonCache[id]||''; $('reasonModal').classList.add('show'); }
+
+// ---------- gate / tabs ----------
 function checkGate(){
   if($('gateInput').value === PASSCODE){
     localStorage.setItem('mkb_gate','1');
@@ -327,7 +469,7 @@ if(localStorage.getItem('mkb_gate')==='1'){ $('gate').style.display='none'; $('a
 function setTab(t){
   currentTab=t;
   document.querySelectorAll('.tab').forEach(el=>el.classList.toggle('active', el.dataset.tab===t));
-  ['dashboard','expenses','income','assets','actuals','debts'].forEach(x=>$('tab-'+x).style.display = x===t?'block':'none');
+  ['dashboard','pl','expenses','income','assets','actuals','debts','points'].forEach(x=>$('tab-'+x).style.display = x===t?'block':'none');
   renderAll();
 }
 
@@ -348,23 +490,33 @@ function getVal(o,k){
   if(k==='income_m') return assetMonthly(o);
   if(k==='linked') return (linkedIncome(o)?.vendor||'').toLowerCase();
   if(k==='asset_link') return (assetOfIncome(o)?.name||'').toLowerCase();
+  if(k==='debtlink') return (debtOf(o)?.name||'').toLowerCase();
+  if(k==='paylink') return (payExpOf(o)?.vendor||'').toLowerCase();
+  if(k==='txasset') return (assets.find(a=>a.id===o.linked_asset_id)?.name||'').toLowerCase();
+  if(k==='capex') return capexOf(o);
+  if(k==='est') return assetEst(o).val;
+  if(k==='effective') return assetEffective(o);
+  if(k==='paymo') return debtMonthlyPay(o);
+  if(k==='ptsval') return ptsValue(o);
+  if(k==='cardlink') return (cardOfPts(o)?.name||'').toLowerCase();
   if(k==='tags') return (o.tags||[]).join(', ').toLowerCase();
-  if(['amount','due_day','balance','monthly_payment','valuation'].includes(k)) return Number(o[k])||0;
+  if(['amount','due_day','balance','monthly_payment','valuation','purchase_price','est_value','balance_points','cents_per_point','years_operating'].includes(k)) return Number(o[k])||0;
   return (o[k]??'').toString().toLowerCase();
 }
 const cmp = t => (a,b)=>{ const x=getVal(a,sorts[t].k), y=getVal(b,sorts[t].k); return (x<y?-1:x>y?1:0)*sorts[t].d; };
 
 // ---------- data ----------
 async function loadAll(){
-  const [a,b,c,d] = await Promise.all([
+  const [a,b,c,d,e] = await Promise.all([
     sb.from('budget_expenses').select('*'),
     sb.from('budget_transactions').select('*'),
     sb.from('budget_debts').select('*'),
-    sb.from('budget_assets').select('*')
+    sb.from('budget_assets').select('*'),
+    sb.from('budget_points').select('*')
   ]);
-  const err=a.error||b.error||c.error||d.error;
+  const err=a.error||b.error||c.error||d.error||e.error;
   if(err){ alert('Load error: '+err.message); return; }
-  items=a.data; txs=b.data; debts=c.data; assets=d.data;
+  items=a.data; txs=b.data; debts=c.data; assets=d.data; points=e.data;
   buildFilters(); renderAll();
 }
 
@@ -385,9 +537,16 @@ function buildFilters(){
   $('vendorList').innerHTML=[...new Set(items.map(i=>i.vendor))].sort().map(v=>`<option>${esc(v)}</option>`).join('');
   const ff=$('f_freq'); const fv=ff.value; ff.innerHTML=fr.map(f=>`<option value="${f}">${FREQ[f].label}</option>`).join(''); ff.value=fv||'monthly';
   const inc=items.filter(i=>i.kind==='income').sort((x,y)=>x.vendor.localeCompare(y.vendor));
-  const av=$('a_link').value;
-  $('a_link').innerHTML='<option value="">None</option>'+inc.map(i=>`<option value="${i.id}">${esc(i.vendor)}</option>`).join('');
-  $('a_link').value=av;
+  const keep=(el)=>el.value;
+  const alv=keep($('a_link'));
+  $('a_link').innerHTML='<option value="">None</option>'+inc.map(i=>`<option value="${i.id}">${esc(i.vendor)}</option>`).join(''); $('a_link').value=alv;
+  const dsorted=[...debts].sort((x,y)=>x.name.localeCompare(y.name));
+  const fdv=keep($('f_debt'));
+  $('f_debt').innerHTML='<option value="">None</option><option value="__new__">&#10133; Create a new debt from this item (in tandem)</option>'+dsorted.map(d=>`<option value="${d.id}">${esc(d.name)} (${fmt(+d.balance)})</option>`).join(''); $('f_debt').value=fdv;
+  const tav=keep($('t_asset'));
+  $('t_asset').innerHTML='<option value="">None</option>'+[...assets].sort((x,y)=>x.name.localeCompare(y.name)).map(a=>`<option value="${a.id}">${esc(a.name)}</option>`).join(''); $('t_asset').value=tav;
+  const pcv=keep($('p_card'));
+  $('p_card').innerHTML='<option value="">None</option>'+dsorted.filter(d=>d.debt_kind==='credit_card').map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join(''); $('p_card').value=pcv;
 }
 
 // ---------- dashboard ----------
@@ -398,8 +557,9 @@ function renderDashboard(){
   const mPers=exp.filter(i=>i.spend_type==='personal').reduce((s,i)=>s+monthly(i),0);
   const mBiz=exp.filter(i=>i.spend_type!=='personal').reduce((s,i)=>s+monthly(i),0);
   const totalDebt=debts.reduce((s,d)=>s+(Number(d.balance)||0),0);
-  const totalAssets=assets.filter(a=>a.active!==false).reduce((s,a)=>s+(Number(a.valuation)||0),0);
+  const totalAssets=assets.filter(a=>a.active!==false).reduce((s,a)=>s+assetEffective(a),0);
   const netWorth=totalAssets-totalDebt;
+  const ptsVal=points.reduce((s,p)=>s+ptsValue(p),0);
   const net=mInc-mExp;
   $('dashCards').innerHTML = `
     <div class="card"><div class="lbl">Monthly Expenses</div><div class="val neg">${fmt(mExp)}</div><div class="hint">${exp.length} recurring items</div></div>
@@ -407,9 +567,10 @@ function renderDashboard(){
     <div class="card"><div class="lbl">Net Monthly</div><div class="val ${net>=0?'pos':'neg'}">${fmt(net)}</div><div class="hint">income &minus; expenses</div></div>
     <div class="card"><div class="lbl">Personal / mo</div><div class="val">${fmt(mPers)}</div></div>
     <div class="card"><div class="lbl">Business / mo</div><div class="val">${fmt(mBiz)}</div></div>
-    <div class="card"><div class="lbl">Total Assets</div><div class="val pos">${fmt(totalAssets)}</div><div class="hint">${assets.length} assets</div></div>
+    <div class="card"><div class="lbl">Total Assets</div><div class="val pos">${fmt(totalAssets)}</div><div class="hint">${assets.length} assets (est+owner)</div></div>
     <div class="card"><div class="lbl">Total Debt &amp; IOUs</div><div class="val neg">${fmt(totalDebt)}</div><div class="hint">${debts.length} entries</div></div>
-    <div class="card"><div class="lbl">Net Worth</div><div class="val ${netWorth>=0?'pos':'neg'}">${fmt(netWorth)}</div><div class="hint">assets &minus; debts</div></div>`;
+    <div class="card"><div class="lbl">Net Worth</div><div class="val ${netWorth>=0?'pos':'neg'}">${fmt(netWorth)}</div><div class="hint">assets &minus; debts</div></div>
+    <div class="card"><div class="lbl">Reward Points Value</div><div class="val">${fmt(ptsVal)}</div><div class="hint">${fmtP(points.reduce((s,p)=>s+(+p.balance_points||0),0))} points</div></div>`;
   const per=m=>[m*12/365.25, m*12/52.1786, m, m*3, m*12];
   const rows=[['Expenses',per(mExp),'neg'],['Income',per(mInc),'pos'],['Net',per(net),net>=0?'pos':'neg'],['Personal spend',per(mPers),''],['Business spend',per(mBiz),'']];
   $('rrTable').querySelector('tbody').innerHTML = rows.map(([l,v,cls])=>
@@ -420,6 +581,51 @@ function renderDashboard(){
     const [cat,ty]=k.split('|');
     return `<tr><td>${esc(cat)}</td><td><span class="badge b-${ty==='personal'?'personal':'business'}">${ty}</span></td><td class="num">${fmt(v)}</td><td class="num">${fmt(v*12)}</td><td class="num">${mExp?Math.round(v/mExp*100):0}%</td></tr>`;
   }).join('');
+}
+
+// ---------- P&L ----------
+function renderPL(){
+  const src=$('plSource').value, f=Number($('plPeriod').value), scope=$('plScope').value;
+  $('plRangeWrap').style.display = src==='actuals'?'inline':'none';
+  $('plPeriod').style.display = src==='budget'?'inline-block':'none';
+  const perLbl={1:'Monthly',3:'Quarterly',12:'Annual'}[f];
+  let incGroups={}, expGroups={}, lbl;
+  if(src==='budget'){
+    lbl=perLbl+' (run-rate)';
+    items.filter(i=>i.active!==false && i.frequency!=='one-time' && (!scope||i.spend_type===scope)).forEach(i=>{
+      const g = i.kind==='income'?incGroups:expGroups;
+      const amt=monthly(i)*f; if(!amt) return;
+      (g[i.category]=g[i.category]||[]).push([i.vendor, amt]);
+    });
+  } else {
+    const from=$('plFrom').value, to=$('plTo').value;
+    lbl='Actuals '+(from||'start')+' &rarr; '+(to||'today');
+    txs.filter(t=>(!from||t.tx_date>=from)&&(!to||t.tx_date<=to)&&(!scope||t.spend_type===scope)).forEach(t=>{
+      const g = t.kind==='income'?incGroups:expGroups;
+      (g[t.category]=g[t.category]||[]).push([t.vendor+' ('+t.tx_date+')', +t.amount||0]);
+    });
+  }
+  const sum=g=>Object.values(g).flat().reduce((s,[,v])=>s+v,0);
+  const ti=sum(incGroups), te=sum(expGroups), net=ti-te;
+  $('plCards').innerHTML=`
+    <div class="card"><div class="lbl">Total Income</div><div class="val pos">${fmt(ti)}</div></div>
+    <div class="card"><div class="lbl">Total Expenses</div><div class="val neg">${fmt(te)}</div></div>
+    <div class="card"><div class="lbl">Net Profit / (Loss)</div><div class="val ${net>=0?'pos':'neg'}">${fmt(net)}</div></div>
+    <div class="card"><div class="lbl">Margin</div><div class="val">${ti?Math.round(net/ti*100)+'%':'—'}</div></div>`;
+  $('plTable').querySelector('thead').innerHTML=`<tr><th>Profit &amp; Loss — ${scope||'combined'} — ${lbl}</th><th class="num">Amount</th></tr>`;
+  const section=(title,groups,sign)=>{
+    let html=`<tr class="pl-cat"><td colspan="2" style="background:#eef2ff;">${title}</td></tr>`;
+    Object.entries(groups).sort((a,b)=>sum({x:b[1]})-sum({x:a[1]})).forEach(([cat,arr])=>{
+      const catSum=arr.reduce((s,[,v])=>s+v,0);
+      html+=`<tr class="pl-cat"><td>${esc(cat)}</td><td class="num">${fmt(catSum)}</td></tr>`;
+      arr.sort((a,b)=>b[1]-a[1]).forEach(([n,v])=>{ html+=`<tr class="pl-item"><td>${esc(n)}</td><td class="num muted">${fmt(v)}</td></tr>`; });
+    });
+    return html;
+  };
+  let body=section('INCOME',incGroups)+`<tr class="pl-total"><td>Total Income</td><td class="num" style="color:var(--green)">${fmt(ti)}</td></tr>`;
+  body+=section('EXPENSES',expGroups)+`<tr class="pl-total"><td>Total Expenses</td><td class="num" style="color:var(--red)">${fmt(te)}</td></tr>`;
+  body+=`<tr class="pl-total"><td>NET PROFIT / (LOSS)</td><td class="num" style="color:${net>=0?'var(--green)':'var(--red)'}">${fmt(net)}</td></tr>`;
+  $('plTable').querySelector('tbody').innerHTML=body;
 }
 
 // ---------- expenses ----------
@@ -443,25 +649,26 @@ function renderExpenses(){
     <div class="card"><div class="lbl">Annual</div><div class="val neg">${fmt(mTot*12)}</div></div>
     <div class="card"><div class="lbl">One-Time (listed)</div><div class="val">${fmt(oneT)}</div><div class="hint">${tbd} items still $0/TBD</div></div>`;
   $('itemsTable').querySelector('thead').innerHTML='<tr>'+
-    TH('exp','vendor','Vendor')+TH('exp','category','Category')+TH('exp','spend_type','Type')+TH('exp','tags','Tags')+
+    TH('exp','vendor','Vendor')+TH('exp','category','Category')+TH('exp','spend_type','Type')+TH('exp','debtlink','Debt')+TH('exp','tags','Tags')+
     TH('exp','amount','Amount',1)+TH('exp','frequency','Frequency')+TH('exp','monthly','Monthly Avg',1)+TH('exp','annual','Annual',1)+
     TH('exp','due_day','Due',1)+'<th>Notes</th><th></th></tr>';
   $('itemsTable').querySelector('tbody').innerHTML = exp.map(i=>{
-    const tbdI=(+i.amount||0)===0;
+    const tbdI=(+i.amount||0)===0; const dl=debtOf(i);
     return `<tr style="${i.active===false?'opacity:.45':''}">
     <td><b>${esc(i.vendor)}</b><div class="muted">${esc(i.description||'')}</div></td>
     <td>${esc(i.category||'')}</td>
     <td><span class="badge b-${i.spend_type==='personal'?'personal':'business'}">${i.spend_type}</span></td>
-    <td style="max-width:140px;">${chips(i)}</td>
+    <td>${dl?`<span class="badge b-debt" title="Outstanding balance">${esc(dl.name)}: ${fmt(+dl.balance)}</span>`:''}</td>
+    <td style="max-width:130px;">${chips(i)}</td>
     <td class="num">${tbdI?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
     <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
     <td class="num"><b>${i.frequency==='one-time'?'&mdash;':fmt(monthly(i))}</b></td>
     <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(annual(i))}</td>
     <td class="num">${i.due_day?('Day '+i.due_day):''}</td>
-    <td class="muted" style="max-width:180px;">${esc(i.notes||'')}</td>
+    <td class="muted" style="max-width:160px;">${esc(i.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td></tr>`;
-  }).join('') || `<tr><td colspan="11" class="muted">No matching items</td></tr>`;
-  $('itemsTable').querySelector('tfoot').innerHTML = `<tr><td colspan="6">Total (${rec.length} recurring shown)</td><td class="num">${fmt(mTot)}</td><td class="num">${fmt(mTot*12)}</td><td colspan="3"></td></tr>`;
+  }).join('') || `<tr><td colspan="12" class="muted">No matching items</td></tr>`;
+  $('itemsTable').querySelector('tfoot').innerHTML = `<tr><td colspan="7">Total (${rec.length} recurring shown)</td><td class="num">${fmt(mTot)}</td><td class="num">${fmt(mTot*12)}</td><td colspan="3"></td></tr>`;
 }
 
 // ---------- income ----------
@@ -492,13 +699,13 @@ function renderIncome(){
     <td><b>${esc(i.vendor)}</b><div class="muted">${esc(i.description||'')}</div></td>
     <td>${esc(i.category||'')}</td>
     <td>${ast?`<span class="badge b-asset">${esc(ast.name)}</span>`:''}</td>
-    <td style="max-width:140px;">${chips(i)}</td>
+    <td style="max-width:130px;">${chips(i)}</td>
     <td class="num">${tbdI?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
     <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
     <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(daily(i))}</td>
     <td class="num"><b>${i.frequency==='one-time'?'&mdash;':fmt(monthly(i))}</b></td>
     <td class="num">${i.frequency==='one-time'?'&mdash;':fmt(annual(i))}</td>
-    <td class="muted" style="max-width:180px;">${esc(i.notes||'')}</td>
+    <td class="muted" style="max-width:160px;">${esc(i.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openItemModal('${i.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delItem('${i.id}')">&times;</button></td></tr>`;
   }).join('') || `<tr><td colspan="11" class="muted">No income streams</td></tr>`;
   $('incomeTable').querySelector('tfoot').innerHTML = `<tr><td colspan="6">Total</td><td class="num">${fmt(mrr*12/365.25)}</td><td class="num">${fmt(mrr)}</td><td class="num">${fmt(mrr*12)}</td><td colspan="2"></td></tr>`;
@@ -506,57 +713,79 @@ function renderIncome(){
 
 // ---------- assets ----------
 function renderAssets(){
+  reasonCache={};
   const q=$('assetSearch').value.toLowerCase(), kind=$('assetKind').value, tag=$('assetTag').value;
   let list=assets.filter(a=>a.active!==false)
     .filter(a=>!kind||a.asset_kind===kind)
     .filter(a=>!tag||(a.tags||[]).includes(tag))
     .filter(a=>!q||(hay(a)+' '+(a.ownership||'').toLowerCase()+' '+(linkedIncome(a)?.vendor||'').toLowerCase()).includes(q));
   list.sort(cmp('asset'));
-  const totVal=list.reduce((s,a)=>s+(+a.valuation||0),0);
-  const re=list.filter(a=>a.asset_kind==='real_estate').reduce((s,a)=>s+(+a.valuation||0),0);
-  const biz=list.filter(a=>a.asset_kind==='business').reduce((s,a)=>s+(+a.valuation||0),0);
+  const totEff=list.reduce((s,a)=>s+assetEffective(a),0);
+  const re=list.filter(a=>a.asset_kind==='real_estate').reduce((s,a)=>s+assetEffective(a),0);
+  const biz=list.filter(a=>a.asset_kind==='business').reduce((s,a)=>s+assetEffective(a),0);
   const mFromAssets=list.reduce((s,a)=>s+assetMonthly(a),0);
-  const allVal=assets.filter(a=>a.active!==false).reduce((s,a)=>s+(+a.valuation||0),0);
+  const capexTot=list.reduce((s,a)=>s+capexOf(a),0);
+  const allEff=assets.filter(a=>a.active!==false).reduce((s,a)=>s+assetEffective(a),0);
   const totalDebt=debts.reduce((s,d)=>s+(+d.balance||0),0);
   $('assetCards').innerHTML=`
-    <div class="card"><div class="lbl">Total Asset Value (shown)</div><div class="val pos">${fmt(totVal)}</div><div class="hint">${list.filter(a=>(+a.valuation||0)===0).length} valuations TBD</div></div>
+    <div class="card"><div class="lbl">Total Asset Value (shown)</div><div class="val pos">${fmt(totEff)}</div><div class="hint">owner value, else estimate</div></div>
     <div class="card"><div class="lbl">Real Estate</div><div class="val">${fmt(re)}</div></div>
     <div class="card"><div class="lbl">Businesses</div><div class="val">${fmt(biz)}</div></div>
+    <div class="card"><div class="lbl">CapEx Invested</div><div class="val">${fmt(capexTot)}</div><div class="hint">logged in Actuals</div></div>
     <div class="card"><div class="lbl">Income From Assets / mo</div><div class="val pos">${fmt(mFromAssets)}</div><div class="hint">${fmt(mFromAssets*12)} / yr</div></div>
-    <div class="card"><div class="lbl">Net Worth</div><div class="val ${allVal-totalDebt>=0?'pos':'neg'}">${fmt(allVal-totalDebt)}</div><div class="hint">all assets &minus; all debts</div></div>`;
+    <div class="card"><div class="lbl">Net Worth</div><div class="val ${allEff-totalDebt>=0?'pos':'neg'}">${fmt(allEff-totalDebt)}</div><div class="hint">all assets &minus; all debts</div></div>`;
   $('assetTable').querySelector('thead').innerHTML='<tr>'+
-    TH('asset','name','Asset')+TH('asset','asset_kind','Kind')+TH('asset','ownership','Ownership')+TH('asset','tags','Tags')+
-    TH('asset','valuation','Valuation',1)+TH('asset','linked','Linked Income Stream')+TH('asset','income_m','Income / mo',1)+
-    '<th class="num">Income / yr</th><th>Notes</th><th></th></tr>';
+    TH('asset','name','Asset')+TH('asset','asset_kind','Kind')+TH('asset','ownership','Owner')+TH('asset','address','Address')+TH('asset','tags','Tags')+
+    TH('asset','capex','CapEx',1)+TH('asset','est','Est. Value (AI/auto)',1)+TH('asset','valuation','Owner Value',1)+TH('asset','effective','Used in NW',1)+
+    TH('asset','linked','Linked Income')+TH('asset','income_m','Income / mo',1)+'<th>Notes</th><th></th></tr>';
   const kindLbl={real_estate:'Real Estate', business:'Business', vehicle:'Vehicle', other:'Other'};
   $('assetTable').querySelector('tbody').innerHTML=list.map(a=>{
-    const li=linkedIncome(a); const m=assetMonthly(a);
+    const li=linkedIncome(a); const m=assetMonthly(a); const est=assetEst(a); const cap=capexOf(a);
+    reasonCache[a.id]=est.reasoning;
+    const zill=a.address?` <a href="https://www.zillow.com/homes/${encodeURIComponent(a.address)}_rb/" target="_blank" style="font-size:11px;">Zillow&nearr;</a>`:'';
     return `<tr>
     <td><b>${esc(a.name)}</b></td>
     <td><span class="badge b-freq">${kindLbl[a.asset_kind]||a.asset_kind}</span></td>
     <td>${esc(a.ownership||'')}</td>
-    <td style="max-width:140px;">${chips(a)}</td>
-    <td class="num">${(+a.valuation||0)===0?'<span class="badge b-tbd">TBD</span>':`<b>${fmt(+a.valuation)}</b>`}</td>
+    <td class="muted" style="max-width:150px;">${esc(a.address||'')}${zill}</td>
+    <td style="max-width:120px;">${chips(a)}</td>
+    <td class="num">${cap?fmt(cap):''}</td>
+    <td class="num">${est.val?`<a href="#" onclick="showReason('${a.id}');return false;" title="Click for reasoning"><b>${fmt(est.val)}</b> &#9432;</a>`:`<a href="#" onclick="showReason('${a.id}');return false;"><span class="badge b-tbd">TBD &#9432;</span></a>`}</td>
+    <td class="num">${(+a.valuation||0)?`<b>${fmt(+a.valuation)}</b>`:'<span class="muted">—</span>'}</td>
+    <td class="num"><b>${fmt(assetEffective(a))}</b></td>
     <td>${li?`<span class="badge b-income">${esc(li.vendor)}</span>`:'<span class="muted">none</span>'}</td>
     <td class="num">${m?fmt(m):''}</td>
-    <td class="num">${m?fmt(m*12):''}</td>
-    <td class="muted" style="max-width:180px;">${esc(a.notes||'')}</td>
+    <td class="muted" style="max-width:140px;">${esc(a.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openAssetModal('${a.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delAsset('${a.id}')">&times;</button></td></tr>`;
-  }).join('') || `<tr><td colspan="10" class="muted">No assets yet</td></tr>`;
-  $('assetTable').querySelector('tfoot').innerHTML=`<tr><td colspan="4">Total</td><td class="num">${fmt(totVal)}</td><td></td><td class="num">${fmt(mFromAssets)}</td><td class="num">${fmt(mFromAssets*12)}</td><td colspan="2"></td></tr>`;
+  }).join('') || `<tr><td colspan="13" class="muted">No assets yet</td></tr>`;
+  $('assetTable').querySelector('tfoot').innerHTML=`<tr><td colspan="5">Total</td><td class="num">${fmt(list.reduce((s,a)=>s+capexOf(a),0))}</td><td></td><td></td><td class="num">${fmt(totEff)}</td><td></td><td class="num">${fmt(mFromAssets)}</td><td colspan="2"></td></tr>`;
+}
+function assetKindUI(){
+  const k=$('a_kind').value;
+  $('a_biz_wrap').style.display = k==='business'?'block':'none';
+  $('a_addr_wrap').style.display = k==='real_estate'?'block':'none';
 }
 function openAssetModal(id){
   editAssetId=id||null;
   $('assetModalTitle').textContent=id?'Edit Asset':'Add Asset';
   const a=id?assets.find(x=>x.id===id):null;
   $('a_name').value=a?.name||''; $('a_kind').value=a?.asset_kind||'real_estate';
-  $('a_valuation').value=a?Number(a.valuation):''; $('a_ownership').value=a?.ownership||'';
+  $('a_ownership').value=a?.ownership||''; $('a_purchase').value=a?.purchase_price?Number(a.purchase_price):'';
+  $('a_owner').value=a?.valuation?Number(a.valuation):''; $('a_method').value=a?.val_method||'auto';
+  $('a_address').value=a?.address||''; $('a_model').value=a?.biz_model||'';
+  $('a_years').value=a?.years_operating??''; $('a_margin').value=a?.profit_margin??''; $('a_growth').value=a?.growth||'flat';
   $('a_link').value=a?.linked_income_id||''; $('a_tags').value=(a?.tags||[]).join(', '); $('a_notes').value=a?.notes||'';
+  assetKindUI();
   $('assetModal').classList.add('show');
 }
 async function saveAsset(){
-  const rec={ name:$('a_name').value.trim(), asset_kind:$('a_kind').value, valuation:Number($('a_valuation').value)||0,
-    ownership:$('a_ownership').value.trim(), linked_income_id:$('a_link').value||null,
+  const rec={ name:$('a_name').value.trim(), asset_kind:$('a_kind').value,
+    ownership:$('a_ownership').value.trim(), purchase_price:Number($('a_purchase').value)||0,
+    valuation:Number($('a_owner').value)||0, val_method:$('a_method').value,
+    address:$('a_address').value.trim(), biz_model:$('a_model').value,
+    years_operating:$('a_years').value?Number($('a_years').value):null,
+    profit_margin:$('a_margin').value?Number($('a_margin').value):null,
+    growth:$('a_growth').value, linked_income_id:$('a_link').value||null,
     tags:parseTags($('a_tags').value), notes:$('a_notes').value.trim(), updated_at:new Date().toISOString() };
   if(!rec.name){alert('Name is required');return;}
   const r = editAssetId ? await sb.from('budget_assets').update(rec).eq('id',editAssetId)
@@ -582,6 +811,7 @@ function openItemModal(id){
   $('f_type').value=i?.spend_type|| (currentTab==='income'?'business':'personal');
   $('f_amount').value=i?Number(i.amount):''; $('f_freq').value=i?.frequency||'monthly';
   $('f_due').value=i?.due_day||''; $('f_active').value=String(i?.active!==false);
+  $('f_debt').value=i?.linked_debt_id||'';
   $('f_tags').value=(i?.tags||[]).join(', '); $('f_notes').value=i?.notes||'';
   $('itemModal').classList.add('show');
 }
@@ -593,6 +823,17 @@ async function saveItem(){
     active:$('f_active').value==='true', tags:parseTags($('f_tags').value), notes:$('f_notes').value.trim(), updated_at:new Date().toISOString()
   };
   if(!rec.vendor){alert('Vendor is required');return;}
+  let debtSel=$('f_debt').value;
+  if(debtSel==='__new__'){
+    const isCC=/credit|card/i.test(rec.vendor+' '+rec.category);
+    const nd={ name:rec.vendor, debt_kind:isCC?'credit_card':'loan', balance:0,
+      monthly_payment:rec.amount*(FREQ[rec.frequency]?.f??1)||null, tags:rec.tags, notes:'Auto-created in tandem with expense "'+rec.vendor+'" — set the balance owed' };
+    const nr=await sb.from('budget_debts').insert(nd).select().single();
+    if(nr.error){alert(nr.error.message);return;}
+    debtSel=nr.data.id;
+    alert('Debt "'+rec.vendor+'" created on the Debts tab — open it and set the balance owed.');
+  }
+  rec.linked_debt_id=debtSel||null;
   const r = editId ? await sb.from('budget_expenses').update(rec).eq('id',editId)
                    : await sb.from('budget_expenses').insert(rec);
   if(r.error){alert(r.error.message);return;}
@@ -639,18 +880,20 @@ function renderTx(){
     <div class="card"><div class="lbl">Avg Spend / Week</div><div class="val">${fmt(spent/days*7)}</div></div>
     <div class="card"><div class="lbl">Avg Spend / Month</div><div class="val">${fmt(spent/days*30.4375)}</div></div>`;
   $('txTable').querySelector('thead').innerHTML='<tr>'+
-    TH('tx','tx_date','Date')+TH('tx','vendor','Vendor / Source')+TH('tx','category','Category')+TH('tx','spend_type','Type')+TH('tx','tags','Tags')+
+    TH('tx','tx_date','Date')+TH('tx','vendor','Vendor / Source')+TH('tx','category','Category')+TH('tx','spend_type','Type')+TH('tx','txasset','Asset (CapEx)')+TH('tx','tags','Tags')+
     TH('tx','amount','Amount',1)+'<th>Notes</th><th></th></tr>';
-  $('txTable').querySelector('tbody').innerHTML=list.map(t=>`
-    <tr><td class="num">${t.tx_date}</td>
+  $('txTable').querySelector('tbody').innerHTML=list.map(t=>{
+    const ast=assets.find(a=>a.id===t.linked_asset_id);
+    return `<tr><td class="num">${t.tx_date}</td>
     <td><b>${esc(t.vendor)}</b></td><td>${esc(t.category||'')}</td>
     <td><span class="badge b-${t.spend_type==='personal'?'personal':'business'}">${t.spend_type}</span>${t.kind==='income'?' <span class="badge b-income">income</span>':''}</td>
-    <td style="max-width:140px;">${chips(t)}</td>
+    <td>${ast?`<span class="badge b-asset">${esc(ast.name)}</span>`:''}</td>
+    <td style="max-width:130px;">${chips(t)}</td>
     <td class="num" style="color:${t.kind==='income'?'var(--green)':'inherit'}">${t.kind==='income'?'+':''}${fmt2(+t.amount)}</td>
     <td class="muted">${esc(t.notes||'')}</td>
-    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openTxModal('${t.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delTx('${t.id}')">&times;</button></td></tr>`).join('')
-    || `<tr><td colspan="8" class="muted">No actuals logged in this range yet. Click "+ Log Actual" to start feeding real numbers.</td></tr>`;
-  $('txTable').querySelector('tfoot').innerHTML=`<tr><td colspan="5">Totals</td><td class="num">${fmt(earned-spent)}</td><td colspan="2"></td></tr>`;
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openTxModal('${t.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delTx('${t.id}')">&times;</button></td></tr>`;
+  }).join('') || `<tr><td colspan="9" class="muted">No actuals logged in this range yet. Click "+ Log Actual" to start feeding real numbers.</td></tr>`;
+  $('txTable').querySelector('tfoot').innerHTML=`<tr><td colspan="6">Totals</td><td class="num">${fmt(earned-spent)}</td><td colspan="2"></td></tr>`;
 }
 function openTxModal(id){
   editTxId=id||null;
@@ -659,6 +902,7 @@ function openTxModal(id){
   $('t_date').value=t?.tx_date||new Date().toISOString().slice(0,10);
   $('t_vendor').value=t?.vendor||''; $('t_kind').value=t?.kind||'expense'; $('t_type').value=t?.spend_type||'personal';
   $('t_amount').value=t?Number(t.amount):''; $('t_category').value=t?.category||'';
+  $('t_asset').value=t?.linked_asset_id||'';
   $('t_tags').value=(t?.tags||[]).join(', '); $('t_notes').value=t?.notes||'';
   $('txModal').classList.add('show');
 }
@@ -669,6 +913,7 @@ $('t_vendor')?.addEventListener('change',()=>{
 async function saveTx(){
   const rec={ tx_date:$('t_date').value, vendor:$('t_vendor').value.trim(), kind:$('t_kind').value,
     spend_type:$('t_type').value, amount:Number($('t_amount').value)||0, category:$('t_category').value.trim()||'Other',
+    linked_asset_id:$('t_asset').value||null,
     tags:parseTags($('t_tags').value), notes:$('t_notes').value.trim() };
   if(!rec.vendor||!rec.tx_date||!rec.amount){alert('Date, vendor and amount are required');return;}
   const r = editTxId ? await sb.from('budget_transactions').update(rec).eq('id',editTxId)
@@ -693,24 +938,28 @@ function renderDebts(){
   list.sort(cmp('debt'));
   const total=debts.reduce((s,d)=>s+(+d.balance||0),0);
   const shown=list.reduce((s,d)=>s+(+d.balance||0),0);
-  const pay=list.reduce((s,d)=>s+(+d.monthly_payment||0),0);
+  const pay=list.reduce((s,d)=>s+debtMonthlyPay(d),0);
   $('debtCards').innerHTML=`
     <div class="card"><div class="lbl">Total Owed (all)</div><div class="val neg">${fmt(total)}</div><div class="hint">${debts.length} entries</div></div>
     <div class="card"><div class="lbl">IOUs / Personal Loans</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='iou').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
     <div class="card"><div class="lbl">Credit Cards</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='credit_card').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
-    <div class="card"><div class="lbl">Committed Monthly Payments</div><div class="val">${fmt(pay)}</div></div>`;
-  const kindLbl={iou:'IOU / Personal Loan', credit_card:'Credit Card', loan:'Loan'};
+    <div class="card"><div class="lbl">Loans / Mortgages</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='loan').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
+    <div class="card"><div class="lbl">Monthly Debt Service</div><div class="val">${fmt(pay)}</div><div class="hint">from linked payment expenses</div></div>`;
+  const kindLbl={iou:'IOU / Personal Loan', credit_card:'Credit Card', loan:'Loan / Mortgage'};
   $('debtTable').querySelector('thead').innerHTML='<tr>'+
     TH('debt','name','Name')+TH('debt','debt_kind','Kind')+TH('debt','tags','Tags')+
-    TH('debt','balance','Balance Owed',1)+TH('debt','monthly_payment','Monthly Payment',1)+'<th>Notes</th><th></th></tr>';
-  $('debtTable').querySelector('tbody').innerHTML=list.map(d=>`
-    <tr><td><b>${esc(d.name)}</b></td><td><span class="badge b-freq">${kindLbl[d.debt_kind]||d.debt_kind}</span></td>
-    <td style="max-width:140px;">${chips(d)}</td>
-    <td class="num"><b>${fmt(+d.balance)}</b></td><td class="num">${d.monthly_payment?fmt(+d.monthly_payment):''}</td>
+    TH('debt','balance','Balance Owed',1)+TH('debt','paymo','Monthly Payment',1)+TH('debt','paylink','Linked Payment (Expenses tab)')+'<th>Notes</th><th></th></tr>';
+  $('debtTable').querySelector('tbody').innerHTML=list.map(d=>{
+    const pe=payExpOf(d);
+    return `<tr><td><b>${esc(d.name)}</b></td><td><span class="badge b-freq">${kindLbl[d.debt_kind]||d.debt_kind}</span></td>
+    <td style="max-width:130px;">${chips(d)}</td>
+    <td class="num"><b>${(+d.balance||0)===0?'<span class="badge b-tbd">TBD</span>':fmt(+d.balance)}</b></td>
+    <td class="num">${debtMonthlyPay(d)?fmt(debtMonthlyPay(d)):''}</td>
+    <td>${pe?`<span class="badge b-debt">${esc(pe.vendor)} — ${fmt(monthly(pe))}/mo</span>`:'<span class="muted">none linked</span>'}</td>
     <td class="muted">${esc(d.notes||'')}</td>
-    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openDebtModal('${d.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delDebt('${d.id}')">&times;</button></td></tr>`).join('')
-    || `<tr><td colspan="7" class="muted">No debts recorded</td></tr>`;
-  $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="3">Total (shown)</td><td class="num">${fmt(shown)}</td><td class="num">${fmt(pay)}</td><td colspan="2"></td></tr>`;
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openDebtModal('${d.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delDebt('${d.id}')">&times;</button></td></tr>`;
+  }).join('') || `<tr><td colspan="8" class="muted">No debts recorded</td></tr>`;
+  $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="3">Total (shown)</td><td class="num">${fmt(shown)}</td><td class="num">${fmt(pay)}</td><td colspan="3"></td></tr>`;
 }
 function openDebtModal(id){
   editDebtId=id||null;
@@ -719,6 +968,8 @@ function openDebtModal(id){
   $('d_name').value=d?.name||''; $('d_kind').value=d?.debt_kind||'iou';
   $('d_balance').value=d?Number(d.balance):''; $('d_payment').value=d?.monthly_payment?Number(d.monthly_payment):'';
   $('d_tags').value=(d?.tags||[]).join(', '); $('d_notes').value=d?.notes||'';
+  $('d_mkexp').checked=false;
+  $('d_mkexp_wrap').style.display=id?'none':'block';
   $('debtModal').classList.add('show');
 }
 async function saveDebt(){
@@ -726,9 +977,23 @@ async function saveDebt(){
     monthly_payment:$('d_payment').value?Number($('d_payment').value):null,
     tags:parseTags($('d_tags').value), notes:$('d_notes').value.trim(), updated_at:new Date().toISOString() };
   if(!rec.name){alert('Name is required');return;}
-  const r = editDebtId ? await sb.from('budget_debts').update(rec).eq('id',editDebtId)
-                       : await sb.from('budget_debts').insert(rec);
-  if(r.error){alert(r.error.message);return;}
+  if(editDebtId){
+    const r=await sb.from('budget_debts').update(rec).eq('id',editDebtId);
+    if(r.error){alert(r.error.message);return;}
+  } else {
+    const r=await sb.from('budget_debts').insert(rec).select().single();
+    if(r.error){alert(r.error.message);return;}
+    if($('d_mkexp').checked){
+      const kindCat = rec.debt_kind==='credit_card' ? 'Debt Payments' : 'Housing';
+      const er=await sb.from('budget_expenses').insert({
+        vendor:rec.name+' Payment', description:'Monthly payment on '+rec.name,
+        category:kindCat, spend_type:'personal', kind:'expense',
+        amount:rec.monthly_payment||0, frequency:'monthly',
+        linked_debt_id:r.data.id, tags:rec.tags,
+        notes:'Auto-created in tandem with debt "'+rec.name+'"' });
+      if(er.error){alert('Debt saved, but expense creation failed: '+er.error.message);}
+    }
+  }
   closeModal('debtModal'); loadAll();
 }
 async function delDebt(id){
@@ -738,10 +1003,73 @@ async function delDebt(id){
   loadAll();
 }
 
+// ---------- points ----------
+function renderPts(){
+  const q=$('ptsSearch').value.toLowerCase(), kf=$('ptsKindF').value;
+  let list=points.filter(p=>!kf||p.points_kind===kf).filter(p=>!q||hay(p).includes(q));
+  list.sort(cmp('pts'));
+  const totPts=points.reduce((s,p)=>s+(+p.balance_points||0),0);
+  const totVal=points.reduce((s,p)=>s+ptsValue(p),0);
+  const soon=new Date(); soon.setDate(soon.getDate()+90);
+  const expSoon=points.filter(p=>p.expires_on && new Date(p.expires_on)<=soon);
+  $('ptsCards').innerHTML=`
+    <div class="card"><div class="lbl">Total Points</div><div class="val">${fmtP(totPts)}</div><div class="hint">${points.length} programs</div></div>
+    <div class="card"><div class="lbl">Est. Total Value</div><div class="val pos">${fmt(totVal)}</div></div>
+    <div class="card"><div class="lbl">Credit Card Points</div><div class="val">${fmtP(points.filter(p=>p.points_kind==='credit_card').reduce((s,p)=>s+(+p.balance_points||0),0))}</div></div>
+    <div class="card"><div class="lbl">Airline / Transferred</div><div class="val">${fmtP(points.filter(p=>p.points_kind!=='credit_card').reduce((s,p)=>s+(+p.balance_points||0),0))}</div></div>
+    <div class="card"><div class="lbl">Expiring &le; 90 days</div><div class="val ${expSoon.length?'neg':''}">${expSoon.length}</div><div class="hint">${expSoon.map(p=>esc(p.program)).join(', ')||'none'}</div></div>`;
+  $('ptsTable').querySelector('thead').innerHTML='<tr>'+
+    TH('pts','program','Program')+TH('pts','points_kind','Kind')+TH('pts','cardlink','Linked Card')+TH('pts','tags','Tags')+
+    TH('pts','balance_points','Points',1)+TH('pts','cents_per_point','&cent;/pt',1)+TH('pts','ptsval','Est. Value',1)+TH('pts','expires_on','Expires')+'<th>Notes</th><th></th></tr>';
+  const kindLbl={credit_card:'Credit Card', airline:'Airline', hotel:'Hotel', other:'Other'};
+  $('ptsTable').querySelector('tbody').innerHTML=list.map(p=>{
+    const card=cardOfPts(p);
+    const expiring=p.expires_on && new Date(p.expires_on)<=soon;
+    return `<tr><td><b>${esc(p.program)}</b></td>
+    <td><span class="badge b-freq">${kindLbl[p.points_kind]||p.points_kind}</span></td>
+    <td>${card?`<span class="badge b-debt">${esc(card.name)}</span>`:''}</td>
+    <td style="max-width:120px;">${chips(p)}</td>
+    <td class="num"><b>${(+p.balance_points||0)===0?'<span class="badge b-tbd">TBD</span>':fmtP(+p.balance_points)}</b></td>
+    <td class="num">${(+p.cents_per_point||0).toFixed(1)}&cent;</td>
+    <td class="num">${fmt(ptsValue(p))}</td>
+    <td>${p.expires_on?`<span class="badge ${expiring?'b-warn':'b-freq'}">${p.expires_on}</span>`:'<span class="muted">no expiry set</span>'}</td>
+    <td class="muted" style="max-width:160px;">${esc(p.notes||'')}</td>
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openPtsModal('${p.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delPts('${p.id}')">&times;</button></td></tr>`;
+  }).join('') || `<tr><td colspan="10" class="muted">No points programs yet</td></tr>`;
+  $('ptsTable').querySelector('tfoot').innerHTML=`<tr><td colspan="4">Total</td><td class="num">${fmtP(totPts)}</td><td></td><td class="num">${fmt(totVal)}</td><td colspan="3"></td></tr>`;
+}
+function openPtsModal(id){
+  editPtsId=id||null;
+  $('ptsModalTitle').textContent=id?'Edit Points Program':'Add Points Program';
+  const p=id?points.find(x=>x.id===id):null;
+  $('p_program').value=p?.program||''; $('p_kind').value=p?.points_kind||'credit_card';
+  $('p_balance').value=p?Number(p.balance_points):''; $('p_cpp').value=p?Number(p.cents_per_point):'1.0';
+  $('p_card').value=p?.linked_debt_id||''; $('p_expires').value=p?.expires_on||'';
+  $('p_tags').value=(p?.tags||[]).join(', '); $('p_notes').value=p?.notes||'';
+  $('ptsModal').classList.add('show');
+}
+async function savePts(){
+  const rec={ program:$('p_program').value.trim(), points_kind:$('p_kind').value,
+    balance_points:Number($('p_balance').value)||0, cents_per_point:Number($('p_cpp').value)||1,
+    linked_debt_id:$('p_card').value||null, expires_on:$('p_expires').value||null,
+    tags:parseTags($('p_tags').value), notes:$('p_notes').value.trim(), updated_at:new Date().toISOString() };
+  if(!rec.program){alert('Program is required');return;}
+  const r = editPtsId ? await sb.from('budget_points').update(rec).eq('id',editPtsId)
+                      : await sb.from('budget_points').insert(rec);
+  if(r.error){alert(r.error.message);return;}
+  closeModal('ptsModal'); loadAll();
+}
+async function delPts(id){
+  if(!confirm('Delete this points program?'))return;
+  const r=await sb.from('budget_points').delete().eq('id',id);
+  if(r.error){alert(r.error.message);return;}
+  loadAll();
+}
+
 // ---------- misc ----------
 function closeModal(id){ $(id).classList.remove('show'); }
 document.querySelectorAll('.overlay').forEach(o=>o.addEventListener('click',e=>{ if(e.target===o) o.classList.remove('show'); }));
-function renderAll(){ renderDashboard(); renderExpenses(); renderIncome(); renderAssets(); renderTx(); renderDebts(); }
+function renderAll(){ renderDashboard(); renderPL(); renderExpenses(); renderIncome(); renderAssets(); renderTx(); renderDebts(); renderPts(); }
 txPreset('month');
 loadAll();
 </script>
