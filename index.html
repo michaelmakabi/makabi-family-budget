@@ -51,6 +51,7 @@
   .b-asset{background:#fce7f3; color:#be185d;}
   .b-debt{background:#fee2e2; color:var(--red);}
   .b-warn{background:#fef3c7; color:var(--amber);}
+  .b-pts{background:#e0e7ff; color:#4338ca;}
   .muted{color:var(--muted); font-size:12px;}
   .tblwrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px;}
   tfoot td{font-weight:700; background:var(--panel);}
@@ -220,7 +221,7 @@
       <div class="toolbar-right"><button class="btn btn-primary" onclick="openDebtModal()">+ Add Debt / IOU</button></div>
     </div>
     <div class="tblwrap"><table id="debtTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="muted" style="margin-top:8px;">Debts correlate with expenses: a mortgage or credit-card payment on the Expenses tab links here, and the linked payment shows below. Adding a debt can auto-create its monthly payment expense in tandem.</p>
+    <p class="muted" style="margin-top:8px;">Debts correlate with expenses and points: a mortgage or credit-card payment on the Expenses tab links here, and credit cards show their reward points from the Points tab (click to jump there).</p>
   </div>
 
   <!-- POINTS -->
@@ -232,7 +233,7 @@
       <div class="toolbar-right"><button class="btn btn-primary" onclick="openPtsModal()">+ Add Program</button></div>
     </div>
     <div class="tblwrap"><table id="ptsTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="muted" style="margin-top:8px;">Track card points and transferred balances (airlines, hotels). Est. value uses cents-per-point. Programs expiring within 90 days get flagged.</p>
+    <p class="muted" style="margin-top:8px;">Track card points and transferred balances (airlines, hotels). Link card programs to their credit card on the Debts tab and the points cross-reference there too. Est. value uses cents-per-point. Programs expiring within 90 days get flagged.</p>
   </div>
 </div>
 
@@ -393,7 +394,7 @@ const FREQ = {
 let items=[], txs=[], debts=[], assets=[], points=[];
 let currentTab='dashboard', editId=null, editTxId=null, editDebtId=null, editAssetId=null, editPtsId=null;
 let sorts = { exp:{k:'monthly',d:-1}, inc:{k:'monthly',d:-1}, asset:{k:'effective',d:-1}, tx:{k:'tx_date',d:-1}, debt:{k:'balance',d:-1}, pts:{k:'balance_points',d:-1} };
-const STR_KEYS=['vendor','category','name','tags','tx_date','frequency','spend_type','asset_kind','debt_kind','ownership','linked','kind','asset_link','debtlink','program','points_kind','expires_on','address','biz_model','paylink','txasset'];
+const STR_KEYS=['vendor','category','name','tags','tx_date','frequency','spend_type','asset_kind','debt_kind','ownership','linked','kind','asset_link','debtlink','program','points_kind','expires_on','address','biz_model','paylink','txasset','cardlink'];
 
 // ---------- helpers ----------
 const $ = id => document.getElementById(id);
@@ -416,6 +417,9 @@ const capexOf = a => txs.filter(t=>t.linked_asset_id===a.id && t.kind!=='income'
 const cardOfPts = p => p.linked_debt_id ? debts.find(d=>d.id===p.linked_debt_id) : null;
 const ptsValue = p => (+p.balance_points||0)*(+p.cents_per_point||0)/100;
 const debtMonthlyPay = d => { const e=payExpOf(d); return e ? monthly(e) : (+d.monthly_payment||0); };
+const ptsOfCard = d => points.filter(p=>p.linked_debt_id===d.id);
+const cardPts = d => ptsOfCard(d).reduce((s,p)=>s+(+p.balance_points||0),0);
+const cardPtsVal = d => ptsOfCard(d).reduce((s,p)=>s+ptsValue(p),0);
 
 // ---------- valuation engine ----------
 function bizAutoVal(a){
@@ -497,6 +501,7 @@ function getVal(o,k){
   if(k==='est') return assetEst(o).val;
   if(k==='effective') return assetEffective(o);
   if(k==='paymo') return debtMonthlyPay(o);
+  if(k==='cardpts') return cardPts(o);
   if(k==='ptsval') return ptsValue(o);
   if(k==='cardlink') return (cardOfPts(o)?.name||'').toLowerCase();
   if(k==='tags') return (o.tags||[]).join(', ').toLowerCase();
@@ -613,9 +618,9 @@ function renderPL(){
     <div class="card"><div class="lbl">Net Profit / (Loss)</div><div class="val ${net>=0?'pos':'neg'}">${fmt(net)}</div></div>
     <div class="card"><div class="lbl">Margin</div><div class="val">${ti?Math.round(net/ti*100)+'%':'—'}</div></div>`;
   $('plTable').querySelector('thead').innerHTML=`<tr><th>Profit &amp; Loss — ${scope||'combined'} — ${lbl}</th><th class="num">Amount</th></tr>`;
-  const section=(title,groups,sign)=>{
+  const section=(title,groups)=>{
     let html=`<tr class="pl-cat"><td colspan="2" style="background:#eef2ff;">${title}</td></tr>`;
-    Object.entries(groups).sort((a,b)=>sum({x:b[1]})-sum({x:a[1]})).forEach(([cat,arr])=>{
+    Object.entries(groups).sort((a,b)=>b[1].reduce((s,[,v])=>s+v,0)-a[1].reduce((s,[,v])=>s+v,0)).forEach(([cat,arr])=>{
       const catSum=arr.reduce((s,[,v])=>s+v,0);
       html+=`<tr class="pl-cat"><td>${esc(cat)}</td><td class="num">${fmt(catSum)}</td></tr>`;
       arr.sort((a,b)=>b[1]-a[1]).forEach(([n,v])=>{ html+=`<tr class="pl-item"><td>${esc(n)}</td><td class="num muted">${fmt(v)}</td></tr>`; });
@@ -939,27 +944,38 @@ function renderDebts(){
   const total=debts.reduce((s,d)=>s+(+d.balance||0),0);
   const shown=list.reduce((s,d)=>s+(+d.balance||0),0);
   const pay=list.reduce((s,d)=>s+debtMonthlyPay(d),0);
+  const ccPts=debts.filter(d=>d.debt_kind==='credit_card').reduce((s,d)=>s+cardPts(d),0);
+  const ccPtsVal=debts.filter(d=>d.debt_kind==='credit_card').reduce((s,d)=>s+cardPtsVal(d),0);
   $('debtCards').innerHTML=`
     <div class="card"><div class="lbl">Total Owed (all)</div><div class="val neg">${fmt(total)}</div><div class="hint">${debts.length} entries</div></div>
     <div class="card"><div class="lbl">IOUs / Personal Loans</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='iou').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
     <div class="card"><div class="lbl">Credit Cards</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='credit_card').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
     <div class="card"><div class="lbl">Loans / Mortgages</div><div class="val">${fmt(debts.filter(d=>d.debt_kind==='loan').reduce((s,d)=>s+(+d.balance||0),0))}</div></div>
-    <div class="card"><div class="lbl">Monthly Debt Service</div><div class="val">${fmt(pay)}</div><div class="hint">from linked payment expenses</div></div>`;
+    <div class="card"><div class="lbl">Monthly Debt Service</div><div class="val">${fmt(pay)}</div><div class="hint">from linked payment expenses</div></div>
+    <div class="card"><div class="lbl">Points on Cards</div><div class="val">${fmtP(ccPts)}</div><div class="hint">&asymp; ${fmt(ccPtsVal)} &middot; from Points tab</div></div>`;
   const kindLbl={iou:'IOU / Personal Loan', credit_card:'Credit Card', loan:'Loan / Mortgage'};
   $('debtTable').querySelector('thead').innerHTML='<tr>'+
     TH('debt','name','Name')+TH('debt','debt_kind','Kind')+TH('debt','tags','Tags')+
-    TH('debt','balance','Balance Owed',1)+TH('debt','paymo','Monthly Payment',1)+TH('debt','paylink','Linked Payment (Expenses tab)')+'<th>Notes</th><th></th></tr>';
+    TH('debt','balance','Balance Owed',1)+TH('debt','paymo','Monthly Payment',1)+TH('debt','cardpts','Points',1)+TH('debt','paylink','Linked Payment (Expenses tab)')+'<th>Notes</th><th></th></tr>';
   $('debtTable').querySelector('tbody').innerHTML=list.map(d=>{
     const pe=payExpOf(d);
+    const progs=ptsOfCard(d);
+    let ptsCell='';
+    if(d.debt_kind==='credit_card'){
+      ptsCell = progs.length
+        ? `<a href="#" onclick="setTab('points');return false;" title="${progs.map(p=>esc(p.program)).join(', ')} — click to open Points tab" style="text-decoration:none;"><span class="badge b-pts"><b>${fmtP(cardPts(d))}</b> pts &asymp; ${fmt(cardPtsVal(d))}</span></a>`
+        : `<a href="#" onclick="setTab('points');return false;" class="muted" title="Add a points program linked to this card">+ link points</a>`;
+    }
     return `<tr><td><b>${esc(d.name)}</b></td><td><span class="badge b-freq">${kindLbl[d.debt_kind]||d.debt_kind}</span></td>
     <td style="max-width:130px;">${chips(d)}</td>
     <td class="num"><b>${(+d.balance||0)===0?'<span class="badge b-tbd">TBD</span>':fmt(+d.balance)}</b></td>
     <td class="num">${debtMonthlyPay(d)?fmt(debtMonthlyPay(d)):''}</td>
+    <td class="num">${ptsCell}</td>
     <td>${pe?`<span class="badge b-debt">${esc(pe.vendor)} — ${fmt(monthly(pe))}/mo</span>`:'<span class="muted">none linked</span>'}</td>
     <td class="muted">${esc(d.notes||'')}</td>
     <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openDebtModal('${d.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delDebt('${d.id}')">&times;</button></td></tr>`;
-  }).join('') || `<tr><td colspan="8" class="muted">No debts recorded</td></tr>`;
-  $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="3">Total (shown)</td><td class="num">${fmt(shown)}</td><td class="num">${fmt(pay)}</td><td colspan="3"></td></tr>`;
+  }).join('') || `<tr><td colspan="9" class="muted">No debts recorded</td></tr>`;
+  $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="3">Total (shown)</td><td class="num">${fmt(shown)}</td><td class="num">${fmt(pay)}</td><td class="num">${fmtP(list.reduce((s,d)=>s+cardPts(d),0))}</td><td colspan="3"></td></tr>`;
 }
 function openDebtModal(id){
   editDebtId=id||null;
@@ -1019,7 +1035,7 @@ function renderPts(){
     <div class="card"><div class="lbl">Airline / Transferred</div><div class="val">${fmtP(points.filter(p=>p.points_kind!=='credit_card').reduce((s,p)=>s+(+p.balance_points||0),0))}</div></div>
     <div class="card"><div class="lbl">Expiring &le; 90 days</div><div class="val ${expSoon.length?'neg':''}">${expSoon.length}</div><div class="hint">${expSoon.map(p=>esc(p.program)).join(', ')||'none'}</div></div>`;
   $('ptsTable').querySelector('thead').innerHTML='<tr>'+
-    TH('pts','program','Program')+TH('pts','points_kind','Kind')+TH('pts','cardlink','Linked Card')+TH('pts','tags','Tags')+
+    TH('pts','program','Program')+TH('pts','points_kind','Kind')+TH('pts','cardlink','Linked Card (Debts tab)')+TH('pts','tags','Tags')+
     TH('pts','balance_points','Points',1)+TH('pts','cents_per_point','&cent;/pt',1)+TH('pts','ptsval','Est. Value',1)+TH('pts','expires_on','Expires')+'<th>Notes</th><th></th></tr>';
   const kindLbl={credit_card:'Credit Card', airline:'Airline', hotel:'Hotel', other:'Other'};
   $('ptsTable').querySelector('tbody').innerHTML=list.map(p=>{
@@ -1027,7 +1043,7 @@ function renderPts(){
     const expiring=p.expires_on && new Date(p.expires_on)<=soon;
     return `<tr><td><b>${esc(p.program)}</b></td>
     <td><span class="badge b-freq">${kindLbl[p.points_kind]||p.points_kind}</span></td>
-    <td>${card?`<span class="badge b-debt">${esc(card.name)}</span>`:''}</td>
+    <td>${card?`<a href="#" onclick="setTab('debts');return false;" title="Balance ${fmt(+card.balance)} — click to open Debts tab" style="text-decoration:none;"><span class="badge b-debt">${esc(card.name)} (${fmt(+card.balance)})</span></a>`:''}</td>
     <td style="max-width:120px;">${chips(p)}</td>
     <td class="num"><b>${(+p.balance_points||0)===0?'<span class="badge b-tbd">TBD</span>':fmtP(+p.balance_points)}</b></td>
     <td class="num">${(+p.cents_per_point||0).toFixed(1)}&cent;</td>
