@@ -64,6 +64,9 @@
   .field label{font-size:12px; font-weight:600; color:var(--muted);}
   .field input,.field select,.field textarea{width:100%;}
   .modal .actions{display:flex; justify-content:flex-end; gap:8px; margin-top:14px;}
+  .kv{width:100%; border-collapse:collapse;}
+  .kv td{padding:7px 8px; border-bottom:1px solid var(--border); font-size:13px;}
+  .kv td:first-child{font-weight:600; color:var(--muted); white-space:nowrap; width:38%;}
   #gate{position:fixed; inset:0; background:#fff; z-index:100; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px;}
   #gate h2{font-size:20px;}
   #gate input{font-size:16px; text-align:center; width:220px;}
@@ -153,7 +156,7 @@
   <div id="tab-bs" style="display:none;">
     <div class="cards" id="bsCards"></div>
     <div class="tblwrap"><table id="bsTable"><thead></thead><tbody></tbody></table></div>
-    <p class="muted" style="margin-top:8px;">QuickBooks-style balance sheet as of today. Assets use Owner Value when set, otherwise the AI/auto estimate. Liabilities pull from the Debts tab. Equity = Assets &minus; Liabilities. Cash/bank accounts aren't connected yet — tell Claude if you want a Cash section added.</p>
+    <p class="muted" style="margin-top:8px;">QuickBooks-style balance sheet as of today. Assets use Owner Value when set, otherwise the AI/auto estimate. Liabilities pull from the Debts tab. Equity = Assets &minus; Liabilities.</p>
   </div>
 
   <!-- EXPENSES -->
@@ -227,13 +230,13 @@
   <div id="tab-debts" style="display:none;">
     <div class="cards" id="debtCards"></div>
     <div class="controls">
-      <input type="search" id="debtSearch" placeholder="Search debts / tags..." oninput="renderAll()">
+      <input type="search" id="debtSearch" placeholder="Search debts / details / tags..." oninput="renderAll()">
       <select id="debtKindF" onchange="renderAll()"><option value="">All Kinds</option><option value="iou">IOU / Personal Loan</option><option value="credit_card">Credit Card</option><option value="loan">Loan / Mortgage</option></select>
       <select id="debtTag" onchange="renderAll()"><option value="">All Tags</option></select>
       <div class="toolbar-right"><button class="btn btn-primary" onclick="openDebtModal()">+ Add Debt / IOU</button></div>
     </div>
     <div class="tblwrap"><table id="debtTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="muted" style="margin-top:8px;">Debts correlate with expenses and points: a mortgage or credit-card payment on the Expenses tab links here, and credit cards show their reward points from the Points tab (click to jump there).</p>
+    <p class="muted" style="margin-top:8px;">Click any debt's name to open its full record — servicer, loan number, insurance providers &amp; policy numbers, escrow, portal links, who manages it, and more. Debts correlate with expenses and points across tabs.</p>
   </div>
 
   <!-- POINTS -->
@@ -245,7 +248,7 @@
       <div class="toolbar-right"><button class="btn btn-primary" onclick="openPtsModal()">+ Add Program</button></div>
     </div>
     <div class="tblwrap"><table id="ptsTable"><thead></thead><tbody></tbody><tfoot></tfoot></table></div>
-    <p class="muted" style="margin-top:8px;">Track card points and transferred balances (airlines, hotels). Link card programs to their credit card on the Debts tab and the points cross-reference there too. Est. value uses cents-per-point. Programs expiring within 90 days get flagged.</p>
+    <p class="muted" style="margin-top:8px;">Track card points and transferred balances (airlines, hotels). Link card programs to their credit card on the Debts tab and the points cross-reference there too. Programs expiring within 90 days get flagged.</p>
   </div>
 </div>
 
@@ -346,11 +349,25 @@
       <div class="field"><label>Monthly Payment ($, optional)</label><input id="d_payment" type="number" step="0.01"></div>
     </div>
     <div class="field" id="d_mkexp_wrap"><label class="muted" style="font-weight:400;"><input type="checkbox" id="d_mkexp"> Also create a matching monthly payment <b>expense</b> linked to this debt (in tandem)</label></div>
+    <div class="field"><label>Details — one per line, <b>Key: Value</b> (servicer, loan #, insurance provider &amp; policy #, escrow, portal URL, who manages it...)</label>
+      <textarea id="d_details" rows="7" placeholder="Servicer: Selene Finance LP&#10;Loan Number: 123456789&#10;Interest Rate: 7.25% fixed 30-yr&#10;Homeowners Insurance: Provider - policy #ABC123&#10;Portal: https://...&#10;Managed By: Mike"></textarea></div>
     <div class="field"><label>Tags (comma separated)</label><input id="d_tags" placeholder="e.g. family, mortgage"></div>
     <div class="field"><label>Notes</label><input id="d_notes"></div>
     <div class="actions">
       <button class="btn btn-light" onclick="closeModal('debtModal')">Cancel</button>
       <button class="btn btn-primary" onclick="saveDebt()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- DEBT DETAILS VIEW MODAL -->
+<div class="overlay" id="debtViewModal">
+  <div class="modal" style="max-width:680px;">
+    <h3 id="dv_title"></h3>
+    <div id="dv_body"></div>
+    <div class="actions">
+      <button class="btn btn-light" onclick="closeModal('debtViewModal')">Close</button>
+      <button class="btn btn-primary" onclick="editFromView()">Edit</button>
     </div>
   </div>
 </div>
@@ -438,7 +455,7 @@ function parentOf(cat, kind){
 const ALL_SUBCATS = [...new Set([...Object.values(COA.income).flat(), ...Object.values(COA.expense).flat()])].sort();
 
 let items=[], txs=[], debts=[], assets=[], points=[];
-let currentTab='dashboard', editId=null, editTxId=null, editDebtId=null, editAssetId=null, editPtsId=null;
+let currentTab='dashboard', editId=null, editTxId=null, editDebtId=null, editAssetId=null, editPtsId=null, viewDebtId=null;
 let sorts = { exp:{k:'monthly',d:-1}, inc:{k:'monthly',d:-1}, asset:{k:'effective',d:-1}, tx:{k:'tx_date',d:-1}, debt:{k:'balance',d:-1}, pts:{k:'balance_points',d:-1} };
 const STR_KEYS=['vendor','category','name','tags','tx_date','frequency','spend_type','asset_kind','debt_kind','ownership','linked','kind','asset_link','debtlink','program','points_kind','expires_on','address','biz_model','paylink','txasset','cardlink','maincat'];
 
@@ -453,7 +470,7 @@ const daily = it => monthly(it)*12/365.25;
 const annual = it => monthly(it)*12;
 const chips = o => (o.tags&&o.tags.length ? o.tags.map(t=>`<span class="badge b-tag">${esc(t)}</span>`).join(' ') : '');
 const parseTags = s => (s||'').split(',').map(x=>x.trim().toLowerCase().replace(/\s+/g,'-')).filter(Boolean);
-const hay = o => ((o.vendor||'')+' '+(o.name||'')+' '+(o.program||'')+' '+(o.description||'')+' '+(o.notes||'')+' '+(o.category||'')+' '+(o.address||'')+' '+((o.tags||[]).join(' '))).toLowerCase();
+const hay = o => ((o.vendor||'')+' '+(o.name||'')+' '+(o.program||'')+' '+(o.description||'')+' '+(o.notes||'')+' '+(o.category||'')+' '+(o.address||'')+' '+((o.tags||[]).join(' '))+' '+(o.details?Object.entries(o.details).map(([k,v])=>k+' '+v).join(' '):'')).toLowerCase();
 const linkedIncome = a => a.linked_income_id ? items.find(i=>i.id===a.linked_income_id) : null;
 const assetMonthly = a => { const li=linkedIncome(a); return li && li.frequency!=='one-time' ? monthly(li) : 0; };
 const assetOfIncome = i => assets.find(a=>a.linked_income_id===i.id);
@@ -466,6 +483,13 @@ const debtMonthlyPay = d => { const e=payExpOf(d); return e ? monthly(e) : (+d.m
 const ptsOfCard = d => points.filter(p=>p.linked_debt_id===d.id);
 const cardPts = d => ptsOfCard(d).reduce((s,p)=>s+(+p.balance_points||0),0);
 const cardPtsVal = d => ptsOfCard(d).reduce((s,p)=>s+ptsValue(p),0);
+const detailsToText = obj => Object.entries(obj||{}).map(([k,v])=>k+': '+v).join('\n');
+function textToDetails(s){
+  const o={};
+  (s||'').split('\n').forEach(l=>{ const m=l.match(/^([^:]+):\s*(.+)$/); if(m) o[m[1].trim()]=m[2].trim(); });
+  return o;
+}
+const linkify = v => /^https?:\/\//.test(v) ? `<a href="${esc(v)}" target="_blank">${esc(v.replace(/^https?:\/\//,'').slice(0,45))}&nearr;</a>` : esc(v);
 
 // ---------- valuation engine ----------
 function bizAutoVal(a){
@@ -643,7 +667,6 @@ function renderPL(){
   $('plRangeWrap').style.display = src==='actuals'?'inline':'none';
   $('plPeriod').style.display = src==='budget'?'inline-block':'none';
   const perLbl={1:'Monthly',3:'Quarterly',12:'Annual'}[f];
-  // tree: {parent: {subcat: [[name, amt], ...]}}
   let incTree={}, expTree={}, lbl;
   const add=(tree,parent,sub,name,amt)=>{ (tree[parent]=tree[parent]||{}); (tree[parent][sub]=tree[parent][sub]||[]).push([name,amt]); };
   if(src==='budget'){
@@ -787,7 +810,7 @@ function renderExpenses(){
     <td class="muted">${esc(parentOf(i.category,i.kind))}</td>
     <td>${esc(i.category||'')}</td>
     <td><span class="badge b-${i.spend_type==='personal'?'personal':'business'}">${i.spend_type}</span></td>
-    <td>${dl?`<span class="badge b-debt" title="Outstanding balance">${esc(dl.name)}: ${fmt(+dl.balance)}</span>`:''}</td>
+    <td>${dl?`<a href="#" onclick="openDebtView('${dl.id}');return false;" style="text-decoration:none;"><span class="badge b-debt" title="Click for full debt record">${esc(dl.name)}: ${fmt(+dl.balance)}</span></a>`:''}</td>
     <td style="max-width:120px;">${chips(i)}</td>
     <td class="num">${tbdI?'<span class="badge b-tbd">TBD</span>':fmt2(+i.amount)}</td>
     <td><span class="badge b-freq">${FREQ[i.frequency]?.label||i.frequency}</span></td>
@@ -1087,29 +1110,52 @@ function renderDebts(){
   $('debtTable').querySelector('tbody').innerHTML=list.map(d=>{
     const pe=payExpOf(d);
     const progs=ptsOfCard(d);
+    const nDetails=Object.keys(d.details||{}).length;
     let ptsCell='';
     if(d.debt_kind==='credit_card'){
       ptsCell = progs.length
         ? `<a href="#" onclick="setTab('points');return false;" title="${progs.map(p=>esc(p.program)).join(', ')} — click to open Points tab" style="text-decoration:none;"><span class="badge b-pts"><b>${fmtP(cardPts(d))}</b> pts &asymp; ${fmt(cardPtsVal(d))}</span></a>`
         : `<a href="#" onclick="setTab('points');return false;" class="muted" title="Add a points program linked to this card">+ link points</a>`;
     }
-    return `<tr><td><b>${esc(d.name)}</b></td><td><span class="badge b-freq">${kindLbl[d.debt_kind]||d.debt_kind}</span></td>
+    const svc=(d.details||{})['Servicer']||'';
+    return `<tr><td><a href="#" onclick="openDebtView('${d.id}');return false;" style="text-decoration:none;color:inherit;"><b>${esc(d.name)}</b>${nDetails?` <span class="badge b-freq" title="${nDetails} detail fields — click to view">&#128196; ${nDetails}</span>`:''}</a>${svc?`<div class="muted">${esc(svc)}</div>`:''}</td>
+    <td><span class="badge b-freq">${kindLbl[d.debt_kind]||d.debt_kind}</span></td>
     <td style="max-width:130px;">${chips(d)}</td>
     <td class="num"><b>${(+d.balance||0)===0?'<span class="badge b-tbd">TBD</span>':fmt(+d.balance)}</b></td>
     <td class="num">${debtMonthlyPay(d)?fmt(debtMonthlyPay(d)):''}</td>
     <td class="num">${ptsCell}</td>
     <td>${pe?`<span class="badge b-debt">${esc(pe.vendor)} — ${fmt(monthly(pe))}/mo</span>`:'<span class="muted">none linked</span>'}</td>
     <td class="muted">${esc(d.notes||'')}</td>
-    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openDebtModal('${d.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delDebt('${d.id}')">&times;</button></td></tr>`;
+    <td style="white-space:nowrap;"><button class="btn btn-light btn-sm" onclick="openDebtView('${d.id}')">View</button> <button class="btn btn-light btn-sm" onclick="openDebtModal('${d.id}')">Edit</button> <button class="btn btn-danger btn-sm" onclick="delDebt('${d.id}')">&times;</button></td></tr>`;
   }).join('') || `<tr><td colspan="9" class="muted">No debts recorded</td></tr>`;
   $('debtTable').querySelector('tfoot').innerHTML=`<tr><td colspan="3">Total (shown)</td><td class="num">${fmt(shown)}</td><td class="num">${fmt(pay)}</td><td class="num">${fmtP(list.reduce((s,d)=>s+cardPts(d),0))}</td><td colspan="3"></td></tr>`;
 }
+function openDebtView(id){
+  const d=debts.find(x=>x.id===id); if(!d) return;
+  viewDebtId=id;
+  const kindLbl={iou:'IOU / Personal Loan', credit_card:'Credit Card', loan:'Loan / Mortgage'};
+  $('dv_title').textContent=d.name;
+  const pe=payExpOf(d); const progs=ptsOfCard(d);
+  let rows='';
+  rows+=`<tr><td>Kind</td><td>${kindLbl[d.debt_kind]||d.debt_kind}</td></tr>`;
+  rows+=`<tr><td>Balance Owed</td><td><b>${(+d.balance||0)===0?'TBD':fmt(+d.balance)}</b></td></tr>`;
+  rows+=`<tr><td>Monthly Payment</td><td>${debtMonthlyPay(d)?fmt(debtMonthlyPay(d)):'—'}</td></tr>`;
+  if(pe) rows+=`<tr><td>Linked Payment Expense</td><td>${esc(pe.vendor)} — ${fmt(monthly(pe))}/mo${pe.due_day?' (due day '+pe.due_day+')':''}</td></tr>`;
+  if(progs.length) rows+=`<tr><td>Reward Points</td><td>${progs.map(p=>esc(p.program)+': '+fmtP(+p.balance_points)+' pts').join('; ')} (&asymp; ${fmt(cardPtsVal(d))})</td></tr>`;
+  Object.entries(d.details||{}).forEach(([k,v])=>{ rows+=`<tr><td>${esc(k)}</td><td>${linkify(v)}</td></tr>`; });
+  if(d.tags&&d.tags.length) rows+=`<tr><td>Tags</td><td>${chips(d)}</td></tr>`;
+  if(d.notes) rows+=`<tr><td>Notes</td><td>${esc(d.notes)}</td></tr>`;
+  $('dv_body').innerHTML=`<table class="kv">${rows}</table>`;
+  $('debtViewModal').classList.add('show');
+}
+function editFromView(){ closeModal('debtViewModal'); if(viewDebtId) openDebtModal(viewDebtId); }
 function openDebtModal(id){
   editDebtId=id||null;
   $('debtModalTitle').textContent=id?'Edit Debt / IOU':'Add Debt / IOU';
   const d=id?debts.find(x=>x.id===id):null;
   $('d_name').value=d?.name||''; $('d_kind').value=d?.debt_kind||'iou';
   $('d_balance').value=d?Number(d.balance):''; $('d_payment').value=d?.monthly_payment?Number(d.monthly_payment):'';
+  $('d_details').value=detailsToText(d?.details);
   $('d_tags').value=(d?.tags||[]).join(', '); $('d_notes').value=d?.notes||'';
   $('d_mkexp').checked=false;
   $('d_mkexp_wrap').style.display=id?'none':'block';
@@ -1118,6 +1164,7 @@ function openDebtModal(id){
 async function saveDebt(){
   const rec={ name:$('d_name').value.trim(), debt_kind:$('d_kind').value, balance:Number($('d_balance').value)||0,
     monthly_payment:$('d_payment').value?Number($('d_payment').value):null,
+    details:textToDetails($('d_details').value),
     tags:parseTags($('d_tags').value), notes:$('d_notes').value.trim(), updated_at:new Date().toISOString() };
   if(!rec.name){alert('Name is required');return;}
   if(editDebtId){
@@ -1170,7 +1217,7 @@ function renderPts(){
     const expiring=p.expires_on && new Date(p.expires_on)<=soon;
     return `<tr><td><b>${esc(p.program)}</b></td>
     <td><span class="badge b-freq">${kindLbl[p.points_kind]||p.points_kind}</span></td>
-    <td>${card?`<a href="#" onclick="setTab('debts');return false;" title="Balance ${fmt(+card.balance)} — click to open Debts tab" style="text-decoration:none;"><span class="badge b-debt">${esc(card.name)} (${fmt(+card.balance)})</span></a>`:''}</td>
+    <td>${card?`<a href="#" onclick="openDebtView('${card.id}');return false;" title="Click for card record" style="text-decoration:none;"><span class="badge b-debt">${esc(card.name)} (${fmt(+card.balance)})</span></a>`:''}</td>
     <td style="max-width:120px;">${chips(p)}</td>
     <td class="num"><b>${(+p.balance_points||0)===0?'<span class="badge b-tbd">TBD</span>':fmtP(+p.balance_points)}</b></td>
     <td class="num">${(+p.cents_per_point||0).toFixed(1)}&cent;</td>
