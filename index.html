@@ -120,6 +120,8 @@
   <!-- DASHBOARD -->
   <div id="tab-dashboard">
     <div class="cards" id="dashCards"></div>
+    <div class="section-title">Net Worth by Person <span class="muted" style="font-weight:400;">(joint items split 50/50)</span></div>
+    <div class="tblwrap"><table id="nwTable"><thead></thead><tbody></tbody></table></div>
     <div class="section-title">Run Rates (recurring items only)</div>
     <div class="tblwrap"><table id="rrTable">
       <thead><tr><th></th><th class="num">Daily</th><th class="num">Weekly</th><th class="num">Monthly</th><th class="num">Quarterly</th><th class="num">Annual</th></tr></thead>
@@ -475,7 +477,7 @@ const COA = {
     'Advertising & Marketing': ['Advertising','Marketing'],
     'Office Expenses': ['Office','Office Supplies','Equipment'],
     'Travel': ['Travel'],
-    'Vehicle': ['Vehicle Lease','Fuel & Charging','Vehicle Maintenance'],
+    'Vehicle': ['Vehicle Lease','Fuel & Charging','Vehicle Maintenance','Parking'],
     'Insurance': ['Health Insurance','Vehicle Insurance','Property Insurance'],
     'Housing': ['Mortgage Payments','HOA Fees','Rent'],
     'Investment Properties': ['Investment Property Mortgages','Property Expenses'],
@@ -515,6 +517,8 @@ const hay = o => ((o.vendor||'')+' '+(o.name||'')+' '+(o.program||'')+' '+(o.des
 const OWNER_LBL={michael:'Michael', loren:'Loren', joint:'Joint'};
 const ownerBadge = o => { const v=o.owner||'joint'; const cls=v==='michael'?'b-mike':v==='loren'?'b-loren':'b-freq'; return `<span class="badge ${cls}">${OWNER_LBL[v]||v}</span>`; };
 const byOwner = (f) => o => !f || (o.owner||'joint')===f;
+const shares = o => { const v=o.owner||'joint'; return v==='michael'?[1,0]:v==='loren'?[0,1]:[0.5,0.5]; };
+const splitSum = (arr,val)=>arr.reduce((acc,o)=>{const [m,l]=shares(o);const v=val(o);acc[0]+=v*m;acc[1]+=v*l;return acc;},[0,0]);
 const linkedIncome = a => a.linked_income_id ? items.find(i=>i.id===a.linked_income_id) : null;
 const assetMonthly = a => { const li=linkedIncome(a); return li && li.frequency!=='one-time' ? monthly(li) : 0; };
 const assetOfIncome = i => assets.find(a=>a.linked_income_id===i.id);
@@ -698,6 +702,43 @@ function renderDashboard(){
     <div class="card"><div class="lbl">Total Debt &amp; IOUs</div><div class="val neg">${fmt(totalDebt)}</div><div class="hint">${debts.length} entries</div></div>
     <div class="card"><div class="lbl">Net Worth</div><div class="val ${netWorth>=0?'pos':'neg'}">${fmt(netWorth)}</div><div class="hint">assets &minus; debts</div></div>
     <div class="card"><div class="lbl">Reward Points Value</div><div class="val">${fmt(ptsVal)}</div><div class="hint">${fmtP(points.reduce((s,p)=>s+(+p.balance_points||0),0))} points</div></div>`;
+  // ----- Net worth by person -----
+  const actAssets=assets.filter(a=>a.active!==false);
+  const cashS=splitSum(accounts,a=>+a.balance||0);
+  const ptsS=splitSum(points,ptsValue);
+  const reS=splitSum(actAssets.filter(a=>a.asset_kind==='real_estate'),assetEffective);
+  const bizS=splitSum(actAssets.filter(a=>a.asset_kind==='business'),assetEffective);
+  const othS=splitSum(actAssets.filter(a=>!['real_estate','business'].includes(a.asset_kind)),assetEffective);
+  const ccS=splitSum(debts.filter(d=>d.debt_kind==='credit_card'),d=>+d.balance||0);
+  const loanS=splitSum(debts.filter(d=>d.debt_kind==='loan'),d=>+d.balance||0);
+  const iouS=splitSum(debts.filter(d=>d.debt_kind==='iou'),d=>+d.balance||0);
+  const taS=[0,1].map(i=>cashS[i]+ptsS[i]+reS[i]+bizS[i]+othS[i]);
+  const tlS=[0,1].map(i=>ccS[i]+loanS[i]+iouS[i]);
+  const nwS=[taS[0]-tlS[0], taS[1]-tlS[1]];
+  const incS=splitSum(inc,monthly), expS=splitSum(exp,monthly);
+  const netMS=[incS[0]-expS[0], incS[1]-expS[1]];
+  $('nwTable').querySelector('thead').innerHTML=`<tr><th></th><th class="num">Michael</th><th class="num">Loren</th><th class="num">Combined</th></tr>`;
+  const NR=(label,s,cls,color)=>`<tr class="${cls||''}"><td>${label}</td>${[s[0],s[1],s[0]+s[1]].map(v=>`<td class="num" style="${color?`color:${v>=0?'var(--green)':'var(--red)'}`:''}">${fmt(v)}</td>`).join('')}</tr>`;
+  let nb='';
+  nb+=`<tr class="pl-head"><td colspan="4">Assets</td></tr>`;
+  nb+=NR('Cash in Banks',cashS,'pl-item');
+  nb+=NR('Reward Points (est.)',ptsS,'pl-item');
+  nb+=NR('Real Estate',reS,'pl-item');
+  nb+=NR('Businesses',bizS,'pl-item');
+  nb+=NR('Vehicles &amp; Other',othS,'pl-item');
+  nb+=NR('Total Assets',taS,'pl-cat');
+  nb+=`<tr class="pl-head"><td colspan="4">Liabilities</td></tr>`;
+  nb+=NR('Credit Cards',ccS,'pl-item');
+  nb+=NR('Loans &amp; Mortgages',loanS,'pl-item');
+  nb+=NR('IOUs / Personal Loans',iouS,'pl-item');
+  nb+=NR('Total Liabilities',tlS,'pl-cat');
+  nb+=NR('<b>NET WORTH</b>',nwS,'pl-total',true);
+  nb+=`<tr class="pl-head"><td colspan="4">Monthly Run Rate</td></tr>`;
+  nb+=NR('Income / mo',incS,'pl-item');
+  nb+=NR('Expenses / mo',expS,'pl-item');
+  nb+=NR('Net / mo',netMS,'pl-cat',true);
+  $('nwTable').querySelector('tbody').innerHTML=nb;
+  // ----- run rates -----
   const per=m=>[m*12/365.25, m*12/52.1786, m, m*3, m*12];
   const rows=[['Expenses',per(mExp),'neg'],['Income',per(mInc),'pos'],['Net',per(net),net>=0?'pos':'neg'],['Personal spend',per(mPers),''],['Business spend',per(mBiz),'']];
   $('rrTable').querySelector('tbody').innerHTML = rows.map(([l,v,cls])=>
@@ -829,7 +870,6 @@ function renderBS(){
   body+=`<tr class="pl-cat"><td>Owner's Equity (Net Worth)</td><td class="num" style="color:${equity>=0?'var(--green)':'var(--red)'}">${fmt(equity)}</td></tr>`;
   body+=`<tr class="pl-total"><td>Total Liabilities &amp; Equity</td><td class="num">${fmt(totalLiab+equity)}</td></tr>`;
   $('bsTable').querySelector('tbody').innerHTML=body;
-  // accounts management table
   let list=[...accounts]; list.sort(cmp('acct'));
   $('acctTable').querySelector('thead').innerHTML='<tr>'+
     TH('acct','name','Account')+TH('acct','bank','Bank')+TH('acct','last4','Last 4')+TH('acct','account_type','Type')+TH('acct','owner','Whose')+
@@ -1222,7 +1262,8 @@ function renderDebts(){
         : `<a href="#" onclick="setTab('points');return false;" class="muted" title="Add a points program linked to this card">+ link points</a>`;
     }
     const svc=(d.details||{})['Servicer']||(d.details||{})['Bank']||'';
-    return `<tr><td><a href="#" onclick="openDebtView('${d.id}');return false;" style="text-decoration:none;color:inherit;"><b>${esc(d.name)}</b>${nDetails?` <span class="badge b-freq" title="${nDetails} detail fields — click to view">&#128196; ${nDetails}</span>`:''}</a>${svc?`<div class="muted">${esc(svc)}</div>`:''}</td>
+    const notServ=(d.tags||[]).includes('not-servicing');
+    return `<tr><td><a href="#" onclick="openDebtView('${d.id}');return false;" style="text-decoration:none;color:inherit;"><b>${esc(d.name)}</b>${nDetails?` <span class="badge b-freq" title="${nDetails} detail fields — click to view">&#128196; ${nDetails}</span>`:''}${notServ?' <span class="badge b-warn">not servicing</span>':''}</a>${svc?`<div class="muted">${esc(svc)}</div>`:''}</td>
     <td>${ownerBadge(d)}</td>
     <td><span class="badge b-freq">${kindLbl[d.debt_kind]||d.debt_kind}</span></td>
     <td style="max-width:110px;">${chips(d)}</td>
